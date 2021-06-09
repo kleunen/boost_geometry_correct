@@ -60,6 +60,15 @@ After removing the self-intersection, two polygons are generated
 
 ![example 2 output](images/example_2_output.png)
 
+# Example 3
+Finally an example with multiple intersections at same point
+
+![example 3 input](images/example_3_input.png)
+
+Polygon is converted into multipolygon
+
+![example 3 output](images/example_3_output.png)
+
 # Approach
 The approach is an adaptation of the methods described in these papers:
 
