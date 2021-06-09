@@ -50,6 +50,7 @@ int main()
 	// Dissolve mote complex example
 	dissolve_from_string("POLYGON((55 10, 141 237, 249 23, 21 171, 252 169, 24 89, 266 73, 55 10))");
 
-
+	// Multiple intersections
+	dissolve_from_string("POLYGON((0 0, 10 0, 0 10, 10 10, 0 0, 5 0, 5 10, 0 10, 0 5, 10 5, 10 0, 0 0))");
 }
 

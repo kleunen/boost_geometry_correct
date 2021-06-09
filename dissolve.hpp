@@ -102,18 +102,19 @@ static inline void dissolve_find_intersections(
             
             std::vector<point_t> output;
 			boost::geometry::intersection(line_1, line_2, output);
-            if(!output.empty()) {
-                double scale_1 = boost::geometry::distance(output[0], ring[i]) / boost::geometry::distance(ring[i + 1], ring[i]);
-                double scale_2 = boost::geometry::distance(output[0], ring[j]) / boost::geometry::distance(ring[j + 1], ring[j]);
+
+			for(auto const &p: output) {
+                double scale_1 = boost::geometry::distance(p, ring[i]) / boost::geometry::distance(ring[i + 1], ring[i]);
+                double scale_2 = boost::geometry::distance(p, ring[j]) / boost::geometry::distance(ring[j + 1], ring[j]);
                 if(scale_1 < 1.0 && scale_2 < 1.0) {
                     pseudo_vertice_key key_j(j, i, scale_2);
-                    pseudo_vertices.emplace(pseudo_vertice_key(i, j, scale_1, true), pseudo_vertice<point_t>(output[0], key_j));
-                    pseudo_vertices.emplace(key_j, output[0]);
+                    pseudo_vertices.emplace(pseudo_vertice_key(i, j, scale_1, true), pseudo_vertice<point_t>(p, key_j));
+                    pseudo_vertices.emplace(key_j, p);
                     start_keys.insert(key_j);
 
                     pseudo_vertice_key key_i(i, j, scale_1);
-                    pseudo_vertices.emplace(pseudo_vertice_key(j, i, scale_2, true), pseudo_vertice<point_t>(output[0], key_i));
-                    pseudo_vertices.emplace(key_i, output[0]);
+                    pseudo_vertices.emplace(pseudo_vertice_key(j, i, scale_2, true), pseudo_vertice<point_t>(p, key_i));
+                    pseudo_vertices.emplace(key_i, p);
                     start_keys.insert(key_i);
                 }
             }          
