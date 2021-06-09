@@ -27,6 +27,8 @@ void dissolve_from_string(std::string const &input)
 	dissolve::dissolve(poly, result, remove_spike_threshold);
 
 	std::cout << "Total area: " << boost::geometry::area(result) << std::endl;
+	std::cout << boost::geometry::wkt(result) << std::endl;
+
 	for(auto const &p: result) {
 		std::cout << "Polygon area: " << boost::geometry::area(p) << std::endl;
 		std::cout << boost::geometry::wkt(p) << std::endl;

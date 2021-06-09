@@ -61,9 +61,11 @@ struct compare_pseudo_vertice_key
         if(a.index_1 > b.index_1) return false;
         if(a.scale < b.scale) return true;
         if(a.scale > b.scale) return false;
+        if(a.index_2 > b.index_2) return true;
+        if(a.index_2 < b.index_2) return false;
         if(a.reroute && !b.reroute) return true;
         if(!a.reroute && b.reroute) return false;
-        return a.index_2 < b.index_2;
+		return false;
     }
 };
 
@@ -163,7 +165,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
             }
 
 			// Repeat until back at starting point
-       	} while(i != start_iter); 
+       	} while(new_ring.size() < 2 || boost::geometry::distance(new_ring.front(), new_ring.back()) > 0);
 
 		auto area = boost::geometry::area(new_ring);
 		bool should_reverse =
