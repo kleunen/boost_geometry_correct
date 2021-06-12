@@ -7,6 +7,9 @@ The failure this library can remove are:
 - overlapping inners
 - inners outside of the polygon outer
 - remove 'spikes' or sub-polygons with very small area
+- incorrect orientation of polygons
+- invalid points in polygons
+- unclosed polygons
 
 The main purpose of this library is to remove self-intersection and spikes from polygons using the boost geometry library. For this, a general approach is used. Meaning, for every polygon it can remove self-intersection, possibly generating multiple output polygons
 
