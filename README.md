@@ -18,10 +18,10 @@ This library provides an approach for the problem described here:
 https://barendgehrels.blogspot.com/2011/02/dissolving-pentagram.html
 
 # Usage
-This is a header-only library so you can import the header file into your project and use the function 'dissolve' to remove errors from a polygon. For example:
+This is a header-only library so you can import the header file into your project and use the function 'correct' to remove errors from a polygon. For example:
 
 ````C++
-#include "dissolve.hpp"
+#include "correct.hpp"
 
 namespace bg = boost::geometry;
 typedef bg::model::d2::point_xy<double> point;
@@ -35,7 +35,7 @@ int main()
 	double remove_spike_threshold = 1E-12;
 
 	multi_polygon result;
-	dissolve::dissolve(poly, result, remove_spike_threshold);
+	geometry::correct(poly, result, remove_spike_threshold);
 
 	// Output polygon(s) are valid polygons
 	if(boost::geometry::is_valid(result))
