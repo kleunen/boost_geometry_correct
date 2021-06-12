@@ -91,14 +91,11 @@ static inline void dissolve_find_intersections(
 {
 	// Generate all by-pass intersections in the graph
 	// Generate a list of all by-pass intersections
-    for(std::size_t i = 0; i < ring.size(); ++i)
+    for(std::size_t z = 0; z < ring.size(); ++z)
     {
-		// Ignore invalid coordinates
-		if(!boost::geometry::is_valid(ring[i]))
-			continue;
-
+		std::size_t i = ring.size() - z - 1;
         pseudo_vertices.emplace(pseudo_vertice_key(i, i, 0.0), ring[i]);       
-        
+
         for(std::size_t j = i + 2; j < ring.size() - 1; ++j)
         {
 			boost::geometry::model::segment<point_t> line_1(ring[i], ring[i + 1]);
@@ -108,8 +105,8 @@ static inline void dissolve_find_intersections(
 			boost::geometry::intersection(line_1, line_2, output);
 
 			for(auto const &p: output) {
-                double scale_1 = boost::geometry::distance(p, ring[i]) / boost::geometry::distance(ring[i + 1], ring[i]);
-                double scale_2 = boost::geometry::distance(p, ring[j]) / boost::geometry::distance(ring[j + 1], ring[j]);
+                double scale_1 = boost::geometry::comparable_distance(p, ring[i]) / boost::geometry::comparable_distance(ring[i + 1], ring[i]);
+                double scale_2 = boost::geometry::comparable_distance(p, ring[j]) / boost::geometry::comparable_distance(ring[j + 1], ring[j]);
                 if(scale_1 < 1.0 && scale_2 < 1.0) {
                     pseudo_vertice_key key_j(j, i, scale_2);
                     pseudo_vertices.emplace(pseudo_vertice_key(i, j, scale_1, true), pseudo_vertice<point_t>(p, key_j));
@@ -124,10 +121,6 @@ static inline void dissolve_find_intersections(
             }          
         }
     }
-
-	// Close ring if it is not closed
-	if(!boost::geometry::equals(pseudo_vertices.begin()->second.p, pseudo_vertices.rbegin()->second.p))
-        pseudo_vertices.emplace(pseudo_vertice_key(ring.size(), ring.size(), 0.0), ring.front());       
 }
 
 // Remove invalid points (NaN) from ring
@@ -195,7 +188,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
         
 		// Store point in generated polygon
 		auto push_point = [&new_ring](auto const &p) { 
-            if(new_ring.empty() || boost::geometry::distance(new_ring.back(), p) > 0)
+            if(new_ring.empty() || boost::geometry::comparable_distance(new_ring.back(), p) > 0)
                 new_ring.push_back(p);
 		};
 
@@ -221,7 +214,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
             }
 
 			// Repeat until back at starting point
-       	} while(new_ring.size() < 2 || boost::geometry::distance(new_ring.front(), new_ring.back()) > 0);
+       	} while(new_ring.size() < 2 || boost::geometry::comparable_distance(new_ring.front(), new_ring.back()) > 0);
 
 		correct_close(new_ring);
 		auto area = correct_orientation(new_ring, order);
@@ -252,14 +245,22 @@ static inline std::vector<ring_t> correct(ring_t const &ring, boost::geometry::o
 
     std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> pseudo_vertices;    
     std::set<pseudo_vertice_key, compare_pseudo_vertice_key> start_keys;
-	dissolve_find_intersections(ring, pseudo_vertices, start_keys);
+
+	ring_t new_ring = ring;
+
+	// Remove invalid coordinates
+	correct_invalid(new_ring);
+
+	// Close ring
+	correct_close(new_ring);
+
+	// Correct orientation
+	correct_orientation(new_ring, order);
+
+	// Detect self-intersection points
+	dissolve_find_intersections(new_ring, pseudo_vertices, start_keys);
+
 	if(start_keys.empty()) {
-		ring_t new_ring = ring;
-
-		correct_invalid(new_ring);
-		correct_close(new_ring);
-		correct_orientation(new_ring, order);
-
 		if(boost::geometry::area(new_ring) > remove_spike_min_area) 
 			return { new_ring };
 		else
