@@ -120,6 +120,10 @@ static inline void dissolve_find_intersections(
             }          
         }
     }
+
+	// Close ring if it is not closed
+	if(!boost::geometry::equals(ring.back(), ring.front()))
+        pseudo_vertices.emplace(pseudo_vertice_key(ring.size(), ring.size(), 0.0), ring.front());       
 }
 
 template<
@@ -144,6 +148,18 @@ template<
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename ring_t = boost::geometry::model::ring<point_t>
 	>
+static inline void correct_close(ring_t &ring)
+{
+	// Close ring if not closed
+	if(!ring.empty() && !boost::geometry::equals(ring.back(), ring.front()))
+		ring.push_back(ring.front());
+
+}
+
+template<
+	typename point_t = boost::geometry::model::d2::point_xy<double>, 
+	typename ring_t = boost::geometry::model::ring<point_t>
+	>
 static inline std::vector<ring_t> dissolve_generate_rings(
 			std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> &pseudo_vertices,
     		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> &start_keys, 
@@ -158,7 +174,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
         
 		// Store point in generated polygon
 		auto push_point = [&new_ring](auto const &p) { 
-            if(new_ring.empty() || boost::geometry::distance(new_ring.back(), p) > 0)
+            if(new_ring.empty() || !boost::geometry::equals(new_ring.back(), p))
                 new_ring.push_back(p);
 		};
 
@@ -184,8 +200,9 @@ static inline std::vector<ring_t> dissolve_generate_rings(
             }
 
 			// Repeat until back at starting point
-       	} while(new_ring.size() < 2 || boost::geometry::distance(new_ring.front(), new_ring.back()) > 0);
+       	} while(new_ring.size() < 2 || !boost::geometry::equals(new_ring.front(), new_ring.back()));
 
+		correct_close(new_ring);
 		auto area = correct_orientation(new_ring, is_inner);
 
 		// Store the point in output polygon
@@ -208,13 +225,23 @@ template<
 	>
 static inline std::vector<ring_t> dissolve(ring_t const &ring, bool is_inner = false, double remove_spike_min_area = 0.0)
 {
+	constexpr std::size_t min_nodes = 3;
+	if(ring.size() < min_nodes)
+		return std::vector<ring_t>();
+
     std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> pseudo_vertices;    
     std::set<pseudo_vertice_key, compare_pseudo_vertice_key> start_keys;
 	dissolve_find_intersections(ring, pseudo_vertices, start_keys);
 	if(start_keys.empty()) {
 		ring_t new_ring = ring;
+
+		correct_close(new_ring);
 		correct_orientation(new_ring, is_inner);
-		return { new_ring };
+
+		if(boost::geometry::area(new_ring) > remove_spike_min_area) 
+			return { new_ring };
+		else
+			return { };
 	}
 
 	return dissolve_generate_rings(pseudo_vertices, start_keys, is_inner, remove_spike_min_area);
@@ -244,6 +271,24 @@ static inline void dissolve(polygon_t const &input, multi_polygon_t &output, dou
 					result_combine(output.back().inners(), std::move(j));
 			}
 		}
+	}
+}
+
+template<
+	typename point_t = boost::geometry::model::d2::point_xy<double>, 
+	typename polygon_t = boost::geometry::model::polygon<point_t>,
+	typename ring_t = boost::geometry::model::ring<point_t>,
+	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
+	>
+static inline void dissolve(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
+{
+	for(auto const &polygon: input)
+	{
+		multi_polygon_t new_polygons;
+		dissolve(polygon, new_polygons, remove_spike_min_area);
+
+		for(auto &new_polygon: new_polygons) 
+			result_combine(output, std::move(new_polygon));
 	}
 }
 
