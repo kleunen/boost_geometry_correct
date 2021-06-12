@@ -195,7 +195,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
         
 		// Store point in generated polygon
 		auto push_point = [&new_ring](auto const &p) { 
-            if(new_ring.empty() || !boost::geometry::equals(new_ring.back(), p))
+            if(new_ring.empty() || boost::geometry::distance(new_ring.back(), p) > 0)
                 new_ring.push_back(p);
 		};
 
@@ -221,7 +221,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
             }
 
 			// Repeat until back at starting point
-       	} while(new_ring.size() < 2 || !boost::geometry::equals(new_ring.front(), new_ring.back()));
+       	} while(new_ring.size() < 2 || boost::geometry::distance(new_ring.front(), new_ring.back()) > 0);
 
 		correct_close(new_ring);
 		auto area = correct_orientation(new_ring, is_inner);
