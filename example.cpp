@@ -1,4 +1,4 @@
-#include "dissolve.hpp"
+#include "make_valid.hpp"
 
 #include <iostream>
 #include <boost/format.hpp>
@@ -8,7 +8,7 @@ typedef bg::model::d2::point_xy<double> point;
 typedef bg::model::polygon<point> polygon;
 typedef bg::model::multi_polygon<polygon> multi_polygon;
 
-void dissolve_from_string(std::string const &input)
+void correct_from_string(std::string const &input)
 {
 	std::cout << "Dissolve polygon: " << input << std::endl;
 
@@ -24,7 +24,7 @@ void dissolve_from_string(std::string const &input)
 	double remove_spike_threshold = 1E-12;
 
 	multi_polygon result;
-	dissolve::dissolve(poly, result, remove_spike_threshold);
+	geometry::correct(poly, result, remove_spike_threshold);
 
 	std::cout << "Total area: " << boost::geometry::area(result) << std::endl;
 	std::cout << boost::geometry::wkt(result) << std::endl;
@@ -45,12 +45,12 @@ void dissolve_from_string(std::string const &input)
 int main()
 {
 	// Dissolve pentagram
-	dissolve_from_string("POLYGON((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0))");
+	correct_from_string("POLYGON((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0))");
 
 	// Dissolve mote complex example
-	dissolve_from_string("POLYGON((55 10, 141 237, 249 23, 21 171, 252 169, 24 89, 266 73, 55 10))");
+	correct_from_string("POLYGON((55 10, 141 237, 249 23, 21 171, 252 169, 24 89, 266 73, 55 10))");
 
 	// Multiple intersections
-	dissolve_from_string("POLYGON((0 0, 10 0, 0 10, 10 10, 0 0, 5 0, 5 10, 0 10, 0 5, 10 5, 10 0, 0 0))");
+	correct_from_string("POLYGON((0 0, 10 0, 0 10, 10 10, 0 0, 5 0, 5 10, 0 10, 0 5, 10 5, 10 0, 0 0))");
 }
 

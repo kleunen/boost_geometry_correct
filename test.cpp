@@ -1,4 +1,4 @@
-#include "dissolve.hpp"
+#include "make_valid.hpp"
 
 #include <iostream>
 #include <boost/format.hpp>
@@ -45,7 +45,7 @@ void random_test()
 		double remove_spike_threshold = 1E-12;
 
 		multi_polygon result;
-		dissolve::dissolve(poly, result, remove_spike_threshold);
+		geometry::correct(poly, result, remove_spike_threshold);
 
 		if(!boost::geometry::is_valid(result)) {
 			if(boost::geometry::is_valid(poly))
@@ -64,7 +64,7 @@ void random_test()
 }
 
 template<typename T = polygon>
-void dissolve_from_string(std::string const &input)
+void correct_from_string(std::string const &input)
 {
 	std::cout << "Dissolve polygon: " << input << std::endl;
 
@@ -80,7 +80,7 @@ void dissolve_from_string(std::string const &input)
 	double remove_spike_threshold = 1E-12;
 
 	multi_polygon result;
-	dissolve::dissolve(poly, result, remove_spike_threshold);
+	geometry::correct(poly, result, remove_spike_threshold);
 
 	boost::geometry::validity_failure_type failure;
 	if(boost::geometry::is_valid(result, failure))
@@ -98,32 +98,32 @@ void test_cases()
 	// https://stackoverflow.com/questions/49902090/dataset-of-invalid-geometries-in-boostgeometry
 	//
 	// Hole Outside Shell
-	dissolve_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (15 15, 15 20, 20 20, 20 15, 15 15))");
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (15 15, 15 20, 20 20, 20 15, 15 15))");
 
 	// Nested holes
-	dissolve_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (2 2, 2 8, 8 8, 8 2, 2 2), (3 3, 3 7, 7 7, 7 3, 3 3))");
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (2 2, 2 8, 8 8, 8 2, 2 2), (3 3, 3 7, 7 7, 7 3, 3 3))");
 
 	// Disconnected Interior
-	dissolve_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (5 0, 10 5, 5 10, 0 5, 5 0))");
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (5 0, 10 5, 5 10, 0 5, 5 0))");
 	//
 	
 	//Self-Intersection 
-	dissolve_from_string("POLYGON((0 0, 10 10, 0 10, 10 0, 0 0))");
+	correct_from_string("POLYGON((0 0, 10 10, 0 10, 10 0, 0 0))");
 
 	// Ring Self-Intersection
-	dissolve_from_string("POLYGON((5 0, 10 0, 10 10, 0 10, 0 0, 5 0, 3 3, 5 6, 7 3, 5 0))");
+	correct_from_string("POLYGON((5 0, 10 0, 10 10, 0 10, 0 0, 5 0, 3 3, 5 6, 7 3, 5 0))");
 
 	// Nested shells
-	dissolve_from_string<multi_polygon>("MULTIPOLYGON(((0 0, 10 0, 10 10, 0 10, 0 0)),(( 2 2, 8 2, 8 8, 2 8, 2 2)))");
+	correct_from_string<multi_polygon>("MULTIPOLYGON(((0 0, 10 0, 10 10, 0 10, 0 0)),(( 2 2, 8 2, 8 8, 2 8, 2 2)))");
 
 	// Duplicated rings
-	dissolve_from_string<multi_polygon>("MULTIPOLYGON(((0 0, 10 0, 10 10, 0 10, 0 0)),((0 0, 10 0, 10 10, 0 10, 0 0)))");
+	correct_from_string<multi_polygon>("MULTIPOLYGON(((0 0, 10 0, 10 10, 0 10, 0 0)),((0 0, 10 0, 10 10, 0 10, 0 0)))");
 
 	// Too few points
-	dissolve_from_string("POLYGON((2 2, 8 2))");
+	correct_from_string("POLYGON((2 2, 8 2))");
 
 	// Ring not closed
-	dissolve_from_string("POLYGON((0 0, 0 10, 10 10, 10 0))");
+	correct_from_string("POLYGON((0 0, 0 10, 10 10, 10 0))");
 }
 
 int main()

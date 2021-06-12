@@ -16,7 +16,7 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/multi_polygon.hpp>
 
-namespace dissolve {
+namespace geometry {
 
 template<typename C, typename T>
 static inline void result_combine(C &result, T &&new_element)
@@ -223,7 +223,7 @@ template<
 	typename ring_t = boost::geometry::model::ring<point_t>,
 	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
 	>
-static inline std::vector<ring_t> dissolve(ring_t const &ring, bool is_inner = false, double remove_spike_min_area = 0.0)
+static inline std::vector<ring_t> correct(ring_t const &ring, bool is_inner = false, double remove_spike_min_area = 0.0)
 {
 	constexpr std::size_t min_nodes = 3;
 	if(ring.size() < min_nodes)
@@ -253,15 +253,15 @@ template<
 	typename ring_t = boost::geometry::model::ring<point_t>,
 	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
 	>
-static inline void dissolve(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
+static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
-	auto outer_rings = dissolve(input.outer(), false, remove_spike_min_area);
+	auto outer_rings = correct(input.outer(), false, remove_spike_min_area);
 	for(auto const &ring: outer_rings) {
 		output.resize(output.size() + 1);
 		output.back().outer() = ring;
 
 		for(auto const &i: input.inners()) {
-			auto new_rings = dissolve(i, true, remove_spike_min_area);
+			auto new_rings = correct(i, true, remove_spike_min_area);
 
 			for(auto const &new_ring: new_rings) {
 				std::vector<ring_t> clipped_rings;
@@ -280,12 +280,12 @@ template<
 	typename ring_t = boost::geometry::model::ring<point_t>,
 	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
 	>
-static inline void dissolve(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
+static inline void correct(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
 	for(auto const &polygon: input)
 	{
 		multi_polygon_t new_polygons;
-		dissolve(polygon, new_polygons, remove_spike_min_area);
+		correct(polygon, new_polygons, remove_spike_min_area);
 
 		for(auto &new_polygon: new_polygons) 
 			result_combine(output, std::move(new_polygon));
