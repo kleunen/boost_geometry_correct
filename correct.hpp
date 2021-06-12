@@ -228,7 +228,6 @@ static inline std::vector<ring_t> dissolve_generate_rings(
 			// Repeat until back at starting point
        	} while(new_ring.size() < 2 || boost::geometry::comparable_distance(new_ring.front(), new_ring.back()) > 0);
 
-		correct_close(new_ring);
 		auto area = correct_orientation(new_ring, order);
 
 		// Store the point in output polygon
