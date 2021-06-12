@@ -78,6 +78,11 @@ https://www.sciencedirect.com/science/article/abs/pii/S0304397520304199
 
 This approach uses the same approach as the described papers, but with a simpler implementation. Both papers describe how this intersection should be split and that all these intersection points should be visited twice to form the simple subpolygons. Here we just selected a different data structure which makes the implementation even more straightforward than described in these papers. It really is a general approach (for 2d polygons). 
 
+# Dataset
+The following post describes a set of common polygon/multi-polygon errors which can be corrected using this library:
+
+https://stackoverflow.com/questions/49902090/dataset-of-invalid-geometries-in-boostgeometry
+
 # License
 "THE BEER-WARE LICENSE" (Revision 42):
 
