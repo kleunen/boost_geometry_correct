@@ -150,12 +150,12 @@ template<
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename ring_t = boost::geometry::model::ring<point_t>
 	>
-static inline double correct_orientation(ring_t &ring, bool is_inner)
+static inline double correct_orientation(ring_t &ring, boost::geometry::order_selector order)
 {
 	auto area = boost::geometry::area(ring);
 	bool should_reverse =
-		(!is_inner && area < 0) ||
-		(is_inner && area > 0);
+		(order == boost::geometry::clockwise && area < 0) ||
+		(order == boost::geometry::counterclockwise && area > 0);
 
 	if(should_reverse) {
 		std::reverse(ring.begin(), ring.end());
@@ -184,7 +184,7 @@ template<
 static inline std::vector<ring_t> dissolve_generate_rings(
 			std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> &pseudo_vertices,
     		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> &start_keys, 
-			bool is_inner = false, double remove_spike_min_area = 0.0)
+			boost::geometry::order_selector order, double remove_spike_min_area = 0.0)
 {
 	std::vector<ring_t> result;
 
@@ -224,7 +224,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
        	} while(new_ring.size() < 2 || boost::geometry::distance(new_ring.front(), new_ring.back()) > 0);
 
 		correct_close(new_ring);
-		auto area = correct_orientation(new_ring, is_inner);
+		auto area = correct_orientation(new_ring, order);
 
 		// Store the point in output polygon
 		push_point(i->second.p);
@@ -233,8 +233,8 @@ static inline std::vector<ring_t> dissolve_generate_rings(
 		if(std::abs(area) > remove_spike_min_area) {
 	      	result_combine(result, std::move(new_ring));
 		}
-    }
-    
+   	}
+
     return result;
 }
 
@@ -244,7 +244,7 @@ template<
 	typename ring_t = boost::geometry::model::ring<point_t>,
 	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
 	>
-static inline std::vector<ring_t> correct(ring_t const &ring, bool is_inner = false, double remove_spike_min_area = 0.0)
+static inline std::vector<ring_t> correct(ring_t const &ring, boost::geometry::order_selector order, double remove_spike_min_area = 0.0)
 {
 	constexpr std::size_t min_nodes = 3;
 	if(ring.size() < min_nodes)
@@ -258,7 +258,7 @@ static inline std::vector<ring_t> correct(ring_t const &ring, bool is_inner = fa
 
 		correct_invalid(new_ring);
 		correct_close(new_ring);
-		correct_orientation(new_ring, is_inner);
+		correct_orientation(new_ring, order);
 
 		if(boost::geometry::area(new_ring) > remove_spike_min_area) 
 			return { new_ring };
@@ -266,7 +266,7 @@ static inline std::vector<ring_t> correct(ring_t const &ring, bool is_inner = fa
 			return { };
 	}
 
-	return dissolve_generate_rings(pseudo_vertices, start_keys, is_inner, remove_spike_min_area);
+	return dissolve_generate_rings(pseudo_vertices, start_keys, order, remove_spike_min_area);
 }
 
 template<
@@ -277,13 +277,16 @@ template<
 	>
 static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
-	auto outer_rings = correct(input.outer(), false, remove_spike_min_area);
+	auto order = boost::geometry::point_order<polygon_t>::value;
+	auto reverse_order = (order == boost::geometry::clockwise ?  boost::geometry::counterclockwise :  boost::geometry::clockwise);
+
+	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
 	for(auto const &ring: outer_rings) {
 		output.resize(output.size() + 1);
 		output.back().outer() = ring;
 
 		for(auto const &i: input.inners()) {
-			auto new_rings = correct(i, true, remove_spike_min_area);
+			auto new_rings = correct(i, reverse_order, remove_spike_min_area);
 
 			for(auto const &new_ring: new_rings) {
 				std::vector<ring_t> clipped_rings;
