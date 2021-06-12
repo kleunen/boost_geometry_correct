@@ -124,6 +124,9 @@ void test_cases()
 
 	// Ring not closed
 	correct_from_string("POLYGON((0 0, 0 10, 10 10, 10 0))");
+
+	// Invalid coordinate
+	correct_from_string("POLYGON((NaN 3, 3 4, 4 4, 4 3, 3 3))");
 }
 
 int main()

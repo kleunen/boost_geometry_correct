@@ -93,6 +93,10 @@ static inline void dissolve_find_intersections(
 	// Generate a list of all by-pass intersections
     for(std::size_t i = 0; i < ring.size(); ++i)
     {
+		// Ignore invalid coordinates
+		if(!boost::geometry::is_valid(ring[i]))
+			continue;
+
         pseudo_vertices.emplace(pseudo_vertice_key(i, i, 0.0), ring[i]);       
         
         for(std::size_t j = i + 2; j < ring.size() - 1; ++j)
@@ -122,10 +126,26 @@ static inline void dissolve_find_intersections(
     }
 
 	// Close ring if it is not closed
-	if(!boost::geometry::equals(ring.back(), ring.front()))
+	if(!boost::geometry::equals(pseudo_vertices.begin()->second.p, pseudo_vertices.rbegin()->second.p))
         pseudo_vertices.emplace(pseudo_vertice_key(ring.size(), ring.size(), 0.0), ring.front());       
 }
 
+// Remove invalid points (NaN) from ring
+template<
+	typename point_t = boost::geometry::model::d2::point_xy<double>, 
+	typename ring_t = boost::geometry::model::ring<point_t>
+	>
+static inline void correct_invalid(ring_t &ring)
+{
+	for(auto i = ring.begin(); i != ring.end(); ) {
+		if(!boost::geometry::is_valid(*i))
+			i = ring.erase(i);
+		else
+			++i;
+	}	
+}
+
+// Correct orientation of ring
 template<
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename ring_t = boost::geometry::model::ring<point_t>
@@ -144,6 +164,7 @@ static inline double correct_orientation(ring_t &ring, bool is_inner)
 	return area;
 }
 
+// Close ring if not closed
 template<
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename ring_t = boost::geometry::model::ring<point_t>
@@ -235,6 +256,7 @@ static inline std::vector<ring_t> correct(ring_t const &ring, bool is_inner = fa
 	if(start_keys.empty()) {
 		ring_t new_ring = ring;
 
+		correct_invalid(new_ring);
 		correct_close(new_ring);
 		correct_orientation(new_ring, is_inner);
 
