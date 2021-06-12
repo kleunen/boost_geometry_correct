@@ -1,4 +1,4 @@
-# Dissolve for boost geometry
+# Make valid for boost geometry
 
 This project provides a header-only library for removing common failures in polygons for boost geometry. 
 
@@ -8,7 +8,7 @@ The failure this library can remove are:
 - inners outside of the polygon outer
 - remove 'spikes' or sub-polygons with very small area
 
-The main purpose of this library is to provide removing self-intersection from polygons using the boost geometry library. For this, a general approach is used. Meaning, for every polygon it can remove self-intersection, possibly generating multiple output polygons
+The main purpose of this library is to remove self-intersection and spikes from polygons using the boost geometry library. For this, a general approach is used. Meaning, for every polygon it can remove self-intersection, possibly generating multiple output polygons
 
 This library provides an approach for the problem described here:
 
