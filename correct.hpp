@@ -90,47 +90,48 @@ static inline void dissolve_find_intersections(
 			std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> &pseudo_vertices,
     		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> &start_keys)
 {
+	if(ring.empty()) return;
+
 	boost::geometry::index::rtree<std::pair< boost::geometry::model::segment<point_t>, std::size_t >, boost::geometry::index::quadratic<16>> index;
 
 	// Generate all by-pass intersections in the graph
 	// Generate a list of all by-pass intersections
-    for(std::size_t i = ring.size(); i--; )
+    pseudo_vertices.emplace(pseudo_vertice_key(ring.size() - 1, ring.size() - 1, 0.0), ring.back());       
+    for(std::size_t i = ring.size() - 1; i--; )
     {
         pseudo_vertices.emplace(pseudo_vertice_key(i, i, 0.0), ring[i]);       
 
-		if(i < ring.size() - 1) {
-			boost::geometry::model::segment<point_t> line_1(ring[i], ring[i + 1]);
+		boost::geometry::model::segment<point_t> line_1(ring[i], ring[i + 1]);
 
-			std::vector< std::pair< boost::geometry::model::segment<point_t>, std::size_t > > result;
-			boost::geometry::index::query(index, boost::geometry::index::intersects(line_1), std::back_inserter(result));
+		std::vector< std::pair< boost::geometry::model::segment<point_t>, std::size_t > > result;
+		boost::geometry::index::query(index, boost::geometry::index::intersects(line_1), std::back_inserter(result));
 
-			for(auto const &iter: result) 
-			{
-				auto const &line_2 = iter.first;
-				auto j = iter.second;
-				
-				std::vector<point_t> output;
-				boost::geometry::intersection(line_1, line_2, output);
+		for(auto const &iter: result) 
+		{
+			auto const &line_2 = iter.first;
+			auto j = iter.second;
+			
+			std::vector<point_t> output;
+			boost::geometry::intersection(line_1, line_2, output);
 
-				for(auto const &p: output) {
-					double scale_1 = boost::geometry::comparable_distance(p, ring[i]) / boost::geometry::comparable_distance(ring[i + 1], ring[i]);
-					double scale_2 = boost::geometry::comparable_distance(p, ring[j]) / boost::geometry::comparable_distance(ring[j + 1], ring[j]);
-					if(scale_1 < 1.0 && scale_2 < 1.0) {
-						pseudo_vertice_key key_j(j, i, scale_2);
-						pseudo_vertices.emplace(pseudo_vertice_key(i, j, scale_1, true), pseudo_vertice<point_t>(p, key_j));
-						pseudo_vertices.emplace(key_j, p);
-						start_keys.insert(key_j);
+			for(auto const &p: output) {
+				double scale_1 = boost::geometry::comparable_distance(p, ring[i]) / boost::geometry::comparable_distance(ring[i + 1], ring[i]);
+				double scale_2 = boost::geometry::comparable_distance(p, ring[j]) / boost::geometry::comparable_distance(ring[j + 1], ring[j]);
+				if(scale_1 < 1.0 && scale_2 < 1.0) {
+					pseudo_vertice_key key_j(j, i, scale_2);
+					pseudo_vertices.emplace(pseudo_vertice_key(i, j, scale_1, true), pseudo_vertice<point_t>(p, key_j));
+					pseudo_vertices.emplace(key_j, p);
+					start_keys.insert(key_j);
 
-						pseudo_vertice_key key_i(i, j, scale_1);
-						pseudo_vertices.emplace(pseudo_vertice_key(j, i, scale_2, true), pseudo_vertice<point_t>(p, key_i));
-						pseudo_vertices.emplace(key_i, p);
-						start_keys.insert(key_i);
-					}
-				}          
-			}
-
-			index.insert(std::make_pair(boost::geometry::model::segment<point_t>(ring[i], ring[i+1]), i));
+					pseudo_vertice_key key_i(i, j, scale_1);
+					pseudo_vertices.emplace(pseudo_vertice_key(j, i, scale_2, true), pseudo_vertice<point_t>(p, key_i));
+					pseudo_vertices.emplace(key_i, p);
+					start_keys.insert(key_i);
+				}
+			}          
 		}
+
+		index.insert(std::make_pair(boost::geometry::model::segment<point_t>(ring[i], ring[i+1]), i));
 
     }
 }
