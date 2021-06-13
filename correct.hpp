@@ -273,7 +273,7 @@ static inline std::vector<ring_t> correct(ring_t const &ring, boost::geometry::o
 	dissolve_find_intersections(new_ring, pseudo_vertices, start_keys);
 
 	if(start_keys.empty()) {
-		if(boost::geometry::area(new_ring) > remove_spike_min_area) 
+		if(std::abs(boost::geometry::area(new_ring)) > remove_spike_min_area) 
 			return { new_ring };
 		else
 			return { };
@@ -299,15 +299,21 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 		output.back().outer() = ring;
 
 		for(auto const &i: input.inners()) {
-			auto new_rings = correct(i, reverse_order, remove_spike_min_area);
+			auto new_rings = correct(i, order, remove_spike_min_area);
 
 			for(auto const &new_ring: new_rings) {
 				std::vector<ring_t> clipped_rings;
 				boost::geometry::intersection(new_ring, output.back().outer(), clipped_rings);
 
-				for(auto &j: clipped_rings)
+				for(auto &j: clipped_rings) {
 					result_combine(output.back().inners(), std::move(j));
+				}
 			}
+		}
+
+		// Correct orientation of inners
+		for(auto &i: output.back().inners()) {
+			std::reverse(i.begin(), i.end());
 		}
 	}
 }

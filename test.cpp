@@ -1,9 +1,13 @@
+#define BOOST_GEOMETRY_NO_ROBUSTNESS
+#include <iostream>
 #include "correct.hpp"
 
-#include <iostream>
 #include <boost/format.hpp>
 
 #include <random>
+#include <chrono>
+
+#include "data/CLC2006_180927.wkt.cpp"
 
 namespace bg = boost::geometry;
 typedef bg::model::d2::point_xy<double> point;
@@ -109,12 +113,68 @@ void test_cases()
 
 	// Invalid coordinate
 	correct_from_string("POLYGON((NaN 3, 3 4, 4 4, 4 3, 3 3))");
+
+
+	// Bowtie polygon
+	correct_from_string("POLYGON((0 0, 0 10, 10 0, 10 10, 0 0))");
+
+	// Square with wrong orientation
+	correct_from_string("POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))");
+
+	// Inner ring with one edge sharing part of an edge of the outer ring
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0),(5 2,5 7,10 7, 10 2, 5 2))");
+
+	// Dangling edge
+	correct_from_string("POLYGON((0 0, 10 0, 15 5, 10 0, 10 10, 0 10, 0 0))");
+
+	// Outer ring not closed
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10))");
+
+	// Two adjacent inner rings
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (1 1, 1 8, 3 8, 3 1, 1 1), (3 1, 3 8, 5 8, 5 1, 3 1))");
+
+	// Polygon with inner ring inside inner ring
+	correct_from_string("POLYGON((0 0, 10 0, 10 10, 0 10, 0 0), (2 8, 5 8, 5 2, 2 2, 2 8), (3 3, 4 3, 3 4, 3 3))");
+}
+
+void data_test_cases()
+{
+	polygon poly;
+	boost::geometry::read_wkt(wkt_CLC2006_180927, poly);
+
+	std::cout << "Outer: " << poly.outer().size() << ", inners: " << poly.inners().size() << std::endl;
+
+	// Minimum area for sub polygon
+	//double remove_spike_threshold = 1E-12;
+	double remove_spike_threshold = 0;
+
+	if(boost::geometry::is_valid(poly))
+		std::cout << "Input is valid" << std::endl;
+	else	
+		std::cout << "Input is not valid" << std::endl;
+
+	auto start_time =std::chrono::high_resolution_clock::now();
+
+	multi_polygon result;
+	geometry::correct(poly, result, remove_spike_threshold);
+
+	auto stop_time = std::chrono::high_resolution_clock::now();
+
+	std::cout << "Result polygons:  " << result.size() << ", outer: " << result[0].outer().size() << ", inners: " << result[0].inners().size() << std::endl;
+	std::cout << std::chrono::duration_cast< std::chrono::milliseconds >(stop_time - start_time).count() << " ms " << std::endl;
+
+	std::string message;
+	if(boost::geometry::is_valid(result, message))
+		std::cout << "Result is valid" << std::endl;
+	else	
+		std::cout << "Result is not valid: " << message << std::endl;
 }
 
 int main()
 {
 	test_cases();
-	random_test();
+	data_test_cases();
+	//random_test();
 	return 0;
 }
 
