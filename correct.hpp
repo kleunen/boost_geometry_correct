@@ -291,17 +291,16 @@ template<
 static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
 	auto order = boost::geometry::point_order<polygon_t>::value;
-	auto reverse_order = (order == boost::geometry::clockwise ?  boost::geometry::counterclockwise :  boost::geometry::clockwise);
 
 	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
-	for(auto const &ring: outer_rings) {
+	for(auto &ring: outer_rings) {
 		output.resize(output.size() + 1);
-		output.back().outer() = ring;
+		output.back().outer() = std::move(ring);
 
 		for(auto const &i: input.inners()) {
 			auto new_rings = correct(i, order, remove_spike_min_area);
 
-			for(auto const &new_ring: new_rings) {
+			for(auto &new_ring: new_rings) {
 				std::vector<ring_t> clipped_rings;
 				boost::geometry::intersection(new_ring, output.back().outer(), clipped_rings);
 
@@ -333,6 +332,42 @@ static inline void correct(multi_polygon_t const &input, multi_polygon_t &output
 
 		for(auto &new_polygon: new_polygons) 
 			result_combine(output, std::move(new_polygon));
+	}
+}
+
+// Perform additional clipping of inners according to OGC (slow)
+template<
+	typename point_t = boost::geometry::model::d2::point_xy<double>, 
+	typename polygon_t = boost::geometry::model::polygon<point_t>,
+	typename ring_t = boost::geometry::model::ring<point_t>,
+	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
+	>
+static inline void correct_clip_inners_ogc(multi_polygon_t &input)
+{
+	for(auto &polygon: input) {
+		if(!polygon.inners().empty()) {
+			multi_polygon_t outer_buffer;
+			boost::geometry::strategy::buffer::distance_symmetric<double> distance_strategy(-2 * std::numeric_limits<double>::epsilon());
+			boost::geometry::strategy::buffer::join_miter join_strategy;
+			boost::geometry::strategy::buffer::end_flat end_strategy;
+			boost::geometry::strategy::buffer::point_circle circle_strategy(3);
+			boost::geometry::strategy::buffer::side_straight side_strategy; 
+			boost::geometry::buffer(polygon, outer_buffer,
+				distance_strategy, side_strategy, join_strategy, end_strategy, circle_strategy); 
+
+			auto inners = std::move(polygon.inners());
+			polygon.inners().clear();
+			polygon.inners().reserve(inners.size());
+
+			for(auto &i: inners) {
+				std::vector<ring_t> clipped_rings;
+				boost::geometry::intersection(i, outer_buffer, clipped_rings);
+					
+				for(auto &j: clipped_rings) {
+					polygon.inners().push_back(std::move(j));
+				}
+			}
+		}
 	}
 }
 

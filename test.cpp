@@ -65,6 +65,7 @@ void correct_from_string(std::string const &input)
 
 	multi_polygon result;
 	geometry::correct(poly, result, remove_spike_threshold);
+	geometry::correct_clip_inners_ogc(result);
 
 	std::cout << boost::geometry::wkt(result) << std::endl;
 
@@ -114,7 +115,8 @@ void test_cases()
 	// Invalid coordinate
 	correct_from_string("POLYGON((NaN 3, 3 4, 4 4, 4 3, 3 3))");
 
-
+	// https://3d.bk.tudelft.nl/hledoux/blog/your-polygons-the-same/
+			
 	// Bowtie polygon
 	correct_from_string("POLYGON((0 0, 0 10, 10 0, 10 10, 0 0))");
 
@@ -139,6 +141,7 @@ void test_cases()
 
 void data_test_cases()
 {
+	// https://github.com/hugoledoux/BIGpolygons
 	polygon poly;
 	boost::geometry::read_wkt(wkt_CLC2006_180927, poly);
 
@@ -174,7 +177,7 @@ int main()
 {
 	test_cases();
 	data_test_cases();
-	//random_test();
+	random_test();
 	return 0;
 }
 
