@@ -37,11 +37,6 @@ int main()
 	multi_polygon result;
 	geometry::correct(poly, result, remove_spike_threshold);
 
-	// Perform additional clipping of inners for full OGC compliance (slow and can be skipped)
-	// According to OGC inners should be _within_ the outer and not on the border
-    // but this requires calculation of the buffer of the outer (slow)
-	geometry::correct_clip_inners_ogc(result);
-
 	// Output polygon(s) are valid polygons
 	if(boost::geometry::is_valid(result))
 		std::cout << "Output polygon is valid" << std::endl;
