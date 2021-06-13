@@ -65,7 +65,6 @@ void correct_from_string(std::string const &input)
 
 	multi_polygon result;
 	geometry::correct(poly, result, remove_spike_threshold);
-	geometry::correct_clip_inners_ogc(result);
 
 	std::cout << boost::geometry::wkt(result) << std::endl;
 
