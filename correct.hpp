@@ -100,7 +100,6 @@ static inline void dissolve_find_intersections(
     for(std::size_t i = ring.size() - 1; i--; )
     {
         pseudo_vertices.emplace(pseudo_vertice_key(i, i, 0.0), ring[i]);       
-
 		boost::geometry::model::segment<point_t> line_1(ring[i], ring[i + 1]);
 
 		std::vector< std::pair< boost::geometry::model::segment<point_t>, std::size_t > > result;
@@ -132,7 +131,6 @@ static inline void dissolve_find_intersections(
 		}
 
 		index.insert(std::make_pair(boost::geometry::model::segment<point_t>(ring[i], ring[i+1]), i));
-
     }
 }
 
@@ -291,9 +289,9 @@ template<
 static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
 	auto order = boost::geometry::point_order<polygon_t>::value;
-
 	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
 
+	// Calculate all outers and combine them if possible
 	multi_polygon_t combined_outers;
 	for(auto &ring: outer_rings) {
 		polygon_t poly;
@@ -313,7 +311,6 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	}
 
 	// Cut out all inners from all the outers
-	//for(auto const &polygon: combined_outers) 
 	boost::geometry::difference(combined_outers, combined_inners, output);
 }
 
