@@ -16,6 +16,7 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
+#include <boost/function_output_iterator.hpp>
 
 namespace geometry {
 
@@ -102,11 +103,10 @@ static inline void dissolve_find_intersections(
         pseudo_vertices.emplace(pseudo_vertice_key(i, i, 0.0), ring[i]);       
 		boost::geometry::model::segment<point_t> line_1(ring[i], ring[i + 1]);
 
-		std::vector< std::pair< boost::geometry::model::segment<point_t>, std::size_t > > result;
-		boost::geometry::index::query(index, boost::geometry::index::intersects(line_1), std::back_inserter(result));
+		boost::geometry::index::query(
+				index, boost::geometry::index::intersects(line_1), 
+				boost::make_function_output_iterator([&](std::pair< boost::geometry::model::segment<point_t>, std::size_t > const &iter) {
 
-		for(auto const &iter: result) 
-		{
 			auto const &line_2 = iter.first;
 			auto j = iter.second;
 			
@@ -128,7 +128,7 @@ static inline void dissolve_find_intersections(
 					start_keys.insert(key_i);
 				}
 			}          
-		}
+		}));
 
 		index.insert(std::make_pair(boost::geometry::model::segment<point_t>(ring[i], ring[i+1]), i));
     }
@@ -234,7 +234,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
 
 		// Combine with already generated polygons
 		if(std::abs(area) > remove_spike_min_area) {
-	      	result_combine(result, std::move(new_ring));
+	    	result.push_back(std::move(new_ring));
 		}
    	}
 
