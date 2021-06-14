@@ -296,8 +296,9 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 
 	multi_polygon_t combined_outers;
 	for(auto &ring: outer_rings) {
-		combined_outers.resize(combined_outers.size() + 1);
-		combined_outers.back().outer() = std::move(ring);
+		polygon_t poly;
+		poly.outer() = std::move(ring);
+		result_combine(combined_outers, std::move(poly));
 	}
 
 	// Calculate all inners and combine them if possible
