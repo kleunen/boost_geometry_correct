@@ -47,6 +47,9 @@ int main()
 
 # Example 1
 First example is a pentagram with self-intersection. 
+````
+POLYGON ((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0))
+````
 
 ![example 1 input](images/example_1_input.png)
 
@@ -56,6 +59,9 @@ Self-intersection is removed and a single polygon is generated
 
 # Example 2
 Second example is a polygon with a hole inside
+````
+POLYGON ((55 10, 141 237, 249 23, 21 171, 252 169, 24 89, 266 73, 55 10))
+````
 
 ![example 2 input](images/example_2_input.png)
 
@@ -65,6 +71,9 @@ After removing the self-intersection, two polygons are generated
 
 # Example 3
 Finally an example with multiple intersections at same point
+````
+POLYGON ((0 0, 10 0, 0 10, 10 10, 0 0, 5 0, 5 10, 0 10, 0 5, 10 5, 10 0, 0 0))
+````
 
 ![example 3 input](images/example_3_input.png)
 
