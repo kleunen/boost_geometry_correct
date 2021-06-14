@@ -293,28 +293,27 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	auto order = boost::geometry::point_order<polygon_t>::value;
 
 	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
+
+	multi_polygon_t combined_outers;
 	for(auto &ring: outer_rings) {
-		output.resize(output.size() + 1);
-		output.back().outer() = std::move(ring);
+		combined_outers.resize(combined_outers.size() + 1);
+		combined_outers.back().outer() = std::move(ring);
+	}
 
-		for(auto const &i: input.inners()) {
-			auto new_rings = correct(i, order, remove_spike_min_area);
-
-			for(auto &new_ring: new_rings) {
-				std::vector<ring_t> clipped_rings;
-				boost::geometry::intersection(new_ring, output.back().outer(), clipped_rings);
-
-				for(auto &j: clipped_rings) {
-					result_combine(output.back().inners(), std::move(j));
-				}
-			}
-		}
-
-		// Correct orientation of inners
-		for(auto &i: output.back().inners()) {
-			std::reverse(i.begin(), i.end());
+	// Calculate all inners and combine them if possible
+	multi_polygon_t combined_inners;
+	for(auto const &i: input.inners()) {
+		auto new_rings = correct(i, order, remove_spike_min_area);
+		for(auto &ring: new_rings) {
+			polygon_t poly;
+			poly.outer() = std::move(ring);
+			result_combine(combined_inners, std::move(poly));
 		}
 	}
+
+	// Cut out all inners from all the outers
+	//for(auto const &polygon: combined_outers) 
+	boost::geometry::difference(combined_outers, combined_inners, output);
 }
 
 template<
