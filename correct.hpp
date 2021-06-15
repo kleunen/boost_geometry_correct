@@ -227,7 +227,7 @@ static inline std::vector<ring_t> dissolve_generate_rings(
 			// Repeat until back at starting point
        	} while(new_ring.size() < 2 || boost::geometry::comparable_distance(new_ring.front(), new_ring.back()) > 0);
 
-		auto area = correct_orientation(new_ring, order);
+		auto area = boost::geometry::area(new_ring);
 
 		// Store the point in output polygon
 		push_point(i->second.p);
@@ -293,20 +293,31 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 
 	// Calculate all outers and combine them if possible
 	multi_polygon_t combined_outers;
+	multi_polygon_t combined_inners;
+
 	for(auto &ring: outer_rings) {
 		polygon_t poly;
 		poly.outer() = std::move(ring);
-		result_combine(combined_outers, std::move(poly));
+		if(boost::geometry::area(poly) > 0)
+			result_combine(combined_outers, std::move(poly));
+		else {
+			std::reverse(poly.outer().begin(), poly.outer().end());
+			result_combine(combined_inners, std::move(poly));
+		}
 	}
 
 	// Calculate all inners and combine them if possible
-	multi_polygon_t combined_inners;
 	for(auto const &i: input.inners()) {
 		auto new_rings = correct(i, order, remove_spike_min_area);
 		for(auto &ring: new_rings) {
 			polygon_t poly;
 			poly.outer() = std::move(ring);
-			result_combine(combined_inners, std::move(poly));
+			if(boost::geometry::area(poly) > 0) {
+				result_combine(combined_outers, std::move(poly));
+			} else {
+				std::reverse(poly.outer().begin(), poly.outer().end());
+				result_combine(combined_inners, std::move(poly));
+			}
 		}
 	}
 

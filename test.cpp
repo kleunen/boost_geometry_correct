@@ -172,11 +172,70 @@ void data_test_cases()
 		std::cout << "Result is not valid: " << message << std::endl;
 }
 
+void jts_test_cases() 
+{
+	// https://github.com/locationtech/jts/blob/master/modules/tests/src/test/resources/testxml/misc/TestInvalidA.xml
+	// JTS test cases
+	
+	// Polygon - Exverted shell, point touch
+	correct_from_string("POLYGON ((10 90, 50 70, 90 90, 90 10, 50 70, 10 10, 10 90))");
+
+	// Polygon - Exverted shell, point-line touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 50 90, 10 10, 10 90))");
+
+	// Polygon - Exverted shell, line touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 60 90, 40 90, 10 10, 10 90))");
+
+	// Polygon - Inverted shell, point touch
+	correct_from_string("POLYGON ((10 90, 50 90, 30 50, 70 50, 50 90, 90 90, 90 10, 10 10, 10 90))");
+
+	// Polygon - Inverted shell, point-line touch
+	correct_from_string("POLYGON ((10 90, 40 90, 40 30, 80 30, 40 70, 90 70, 90 10, 10 10, 10 90))");
+
+	// Polygon - Inverted shell, line touch, exterior
+	correct_from_string("POLYGON ((10 90, 70 90, 40 90, 40 60, 70 60, 70 90, 90 90, 90 10, 10 10, 10 90))");
+
+	// Polygon - Inverted shell, line touch, interior
+	correct_from_string("POLYGON ((10 90, 50 90, 50 70, 30 40, 70 40, 50 70, 50 90, 90 90, 90 10, 10 10, 10 90))");
+
+	// Polygon/Hole - Exverted hole, point touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (20 80, 50 60, 80 80, 80 20, 50 60, 20 20, 20 80))");
+
+	// Polygon/Hole - Exverted hole, point-line touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (20 80, 80 80, 80 20, 50 80, 20 20, 20 80))");
+
+	// Polygon/Hole - Exverted hole, line touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (80 80, 60 50, 40 50, 20 80, 20 20, 40 50, 60 50, 80 20, 80 80))");
+
+	// Polygon/Hole - Inverted hole, point touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (20 80, 50 80, 30 50, 70 50, 50 80, 80 80, 80 20, 20 20, 20 80))");
+
+	// Polygon/Hole - Inverted hole, point-line touch
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (20 80, 40 80, 40 40, 70 40, 40 70, 80 70, 80 20, 20 20, 20 80))");
+
+	// Polygon/Hole - Inverted hole, line touch, interior
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (20 80, 60 80, 40 80, 40 40, 60 40, 60 80, 80 80, 80 20, 20 20, 20 80))");
+
+	// Polygon/Hole - Inverted hole, line touch, exterior 
+	correct_from_string("POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (50 80, 50 60, 40 40, 60 40, 50 60, 50 80, 80 30, 20 30, 50 80))");
+
+	// Polygon/Hole - Exverted shell, point touch; exverted hole, point touch 
+	correct_from_string("POLYGON ((10 10, 10 90, 50 50, 90 90, 90 10, 50 50, 10 10), (80 60, 50 50, 20 60, 20 40, 50 50, 80 40, 80 60))");
+
+	// JTS document
+	// https://docs.google.com/document/d/19YEQS0goSpZlwaYivS6ZpxJ5gRth2gdG6aY2XVd5fcc/edit
+	// 
+	correct_from_string("POLYGON ((10 70, 90 70, 90 50, 30 50, 30 30, 50 30, 50 90, 70 90, 70 10, 10 10, 10 70))");
+
+	correct_from_string("POLYGON ((10 50, 80 50, 80 70, 40 70, 40 30, 30 30, 30 80, 90 80, 90 40, 20 40, 20 20, 50 20, 50 90, 60 90, 60 10, 10 10, 10 50))");
+}
+
 int main()
 {
 	test_cases();
 	data_test_cases();
 	random_test();
+	jts_test_cases(); 
 	return 0;
 }
 
