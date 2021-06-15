@@ -81,6 +81,30 @@ Polygon is converted into multipolygon
 
 ![example 3 output](images/example_3_output.png)
 
+# Example 4
+Overlapping regions can be handled in different ways, for example the following polygon:
+````
+POLYGON ((10 70, 90 70, 90 50, 30 50, 30 30, 50 30, 50 90, 70 90, 70 10, 10 10, 10 70))
+````
+
+![example 4 input](images/overlap_input.png)
+
+Can be generated using non-zero winding rule:
+
+````
+geometry::correct(poly, result, remove_spike_threshold);
+````
+![example 4 non-zero winding](images/overlap_non_zero_winding.png)
+
+Or using odd-even rule:
+
+````
+geometry::correct_odd_even(poly, result, remove_spike_threshold);
+````
+![example 4 odd-even](images/overlap_odd_even.png)
+
+Odd-even rule generates more polygons and more holes 
+
 # Approach
 The approach is an adaptation of the methods described in these papers:
 
