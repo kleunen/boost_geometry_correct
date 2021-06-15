@@ -105,6 +105,12 @@ geometry::correct_odd_even(poly, result, remove_spike_threshold);
 
 Odd-even rule generates more polygons and more holes 
 
+# Timing
+
+Timing of large polygon (1 outer, 298 inners, ~100.000 nodes): 
+
+1600 ms @ Intel(R) Pentium(R) Silver N5000 CPU (Mobile CPU)
+
 # Approach
 The approach is an adaptation of the methods described in these papers:
 
