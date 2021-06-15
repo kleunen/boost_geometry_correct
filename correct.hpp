@@ -307,18 +307,16 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	}
 
 	// Calculate all inners and combine them if possible
-	for(auto const &i: input.inners()) {
-		auto new_rings = correct(i, order, remove_spike_min_area);
-		for(auto &ring: new_rings) {
-			polygon_t poly;
-			poly.outer() = std::move(ring);
-			if(boost::geometry::area(poly) > 0) {
-				result_combine(combined_outers, std::move(poly));
-			} else {
-				std::reverse(poly.outer().begin(), poly.outer().end());
-				result_combine(combined_inners, std::move(poly));
-			}
-		}
+	for(auto const &ring: input.inners()) {
+		polygon_t poly;
+		poly.outer() = std::move(ring);
+
+		multi_polygon_t new_inners;
+		correct(poly, new_inners, remove_spike_min_area);
+
+		for(auto &poly: new_inners) {
+			result_combine(combined_inners, std::move(poly));
+		} 
 	}
 
 	// Cut out all inners from all the outers
