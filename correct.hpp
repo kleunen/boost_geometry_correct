@@ -331,13 +331,32 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
 
 	// Calculate all outers and combine them if possible
-	multi_polygon_t combined_outers;
+	std::vector<multi_polygon_t> combined_outers;
 	multi_polygon_t combined_inners;
 
 	for(auto &ring: outer_rings) {
 		polygon_t poly;
 		poly.outer() = std::move(ring);
-		combine(combined_outers, combined_inners, poly);
+
+		if(boost::geometry::area(poly) < 0)
+			std::reverse(poly.outer().begin(), poly.outer().end());
+
+		multi_polygon_t mp;
+		mp.push_back(std::move(poly));
+		combined_outers.push_back(std::move(mp));
+	}
+
+	while(combined_outers.size() > 1) {
+		for(std::size_t i = 0; i < combined_outers.size() / 2; ++i) {
+			std::size_t index = i + combined_outers.size() / 2;
+			if(index < combined_outers.size()) {
+				multi_polygon_t result;
+				boost::geometry::sym_difference(combined_outers[i], combined_outers[index], result);
+				combined_outers[i] = std::move(result);
+			}
+		}
+
+		combined_outers.resize(combined_outers.size() / 2);
 	}
 
 	// Calculate all inners and combine them if possible
@@ -354,7 +373,7 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	}
 
 	// Cut out all inners from all the outers
-	boost::geometry::difference(combined_outers, combined_inners, output);
+	boost::geometry::difference(combined_outers[0], combined_inners, output);
 }
 
 template<
