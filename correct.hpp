@@ -289,14 +289,24 @@ template<
 	>
 struct combine_non_zero_winding
 {
-	inline void operator()(multi_polygon_t &combined_outers, multi_polygon_t &combined_inners, polygon_t &poly) 
+	inline void operator()(std::vector<multi_polygon_t> &combined_outers, multi_polygon_t &combined_inners) 
 	{
-		if(boost::geometry::area(poly) > 0)
-			result_combine(combined_outers, std::move(poly));
-		else {
-			std::reverse(poly.outer().begin(), poly.outer().end());
-			result_combine(combined_inners, std::move(poly));
+		std::vector<multi_polygon_t> new_combined_outers;
+		new_combined_outers.resize(new_combined_outers.size() + 1);
+
+		for(auto &mp: combined_outers) {
+			for(auto &poly: mp) {
+				double area = boost::geometry::area(poly);
+				if(area < 0) {
+					std::reverse(poly.outer().begin(), poly.outer().end());
+					result_combine(combined_inners, std::move(poly));
+				} else { 
+					result_combine(new_combined_outers.front(), std::move(poly));
+				}
+			}
 		}
+
+		combined_outers = std::move(new_combined_outers);
 	}
 };
 
@@ -307,14 +317,29 @@ template<
 	>
 struct combine_odd_even
 {
-	inline void operator()(multi_polygon_t &combined_outers, multi_polygon_t &combined_inners, polygon_t &poly) 
+	inline void operator()(std::vector<multi_polygon_t> &combined_outers, multi_polygon_t &combined_inners) 
 	{
-		if(boost::geometry::area(poly) < 0)
-			std::reverse(poly.outer().begin(), poly.outer().end());
+		for(auto &mp: combined_outers) {
+			for(auto &poly: mp) {
+				if(boost::geometry::area(poly) < 0)
+					std::reverse(poly.outer().begin(), poly.outer().end());
 
-		multi_polygon_t result;
-		boost::geometry::sym_difference(combined_outers, poly, result);
-		combined_outers = std::move(result);
+			}
+		}
+
+		while(combined_outers.size() > 1) {
+			std::size_t divide_i = combined_outers.size() / 2 + combined_outers.size() % 2;
+			for(std::size_t i = 0; i < combined_outers.size() / 2; ++i) {
+				std::size_t index = i + divide_i;
+				if(index < combined_outers.size()) {
+					multi_polygon_t result;
+					boost::geometry::sym_difference(combined_outers[index], combined_outers[i], result);
+					combined_outers[i] = std::move(result);
+				}
+			}
+
+			combined_outers.resize(divide_i);
+		}
 	}
 };
  
@@ -341,27 +366,11 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 		polygon_t poly;
 		poly.outer() = std::move(ring);
 
-		if(boost::geometry::area(poly) < 0)
-			std::reverse(poly.outer().begin(), poly.outer().end());
-
-		multi_polygon_t mp;
-		mp.push_back(std::move(poly));
-		combined_outers.push_back(std::move(mp));
+		combined_outers.resize(combined_outers.size() + 1);
+		combined_outers.back().push_back(std::move(poly));
 	}
 
-	while(combined_outers.size() > 1) {
-		std::size_t divide_i = combined_outers.size() / 2 + combined_outers.size() % 2;
-		for(std::size_t i = 0; i < combined_outers.size() / 2; ++i) {
-			std::size_t index = i + divide_i;
-			if(index < combined_outers.size()) {
-				multi_polygon_t result;
-				boost::geometry::sym_difference(combined_outers[index], combined_outers[i], result);
-				combined_outers[i] = result;
-			}
-		}
-
-		combined_outers.resize(divide_i);
-	}
+	combine(combined_outers, combined_inners);
 
 	// Calculate all inners and combine them if possible
 	for(auto const &ring: input.inners()) {
@@ -377,7 +386,8 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	}
 
 	// Cut out all inners from all the outers
-	boost::geometry::difference(combined_outers[0], combined_inners, output);
+	if(!combined_outers.empty())
+		boost::geometry::difference(combined_outers[0], combined_inners, output);
 }
 
 template<
