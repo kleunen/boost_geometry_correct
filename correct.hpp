@@ -330,6 +330,9 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	auto order = boost::geometry::point_order<polygon_t>::value;
 	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
 
+	auto compare = [](ring_t const &a, ring_t const &b) { return std::abs(boost::geometry::area(a)) < std::abs(boost::geometry::area(b)); };
+	std::sort(outer_rings.begin(), outer_rings.end(), compare);
+
 	// Calculate all outers and combine them if possible
 	std::vector<multi_polygon_t> combined_outers;
 	multi_polygon_t combined_inners;
@@ -347,16 +350,17 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 	}
 
 	while(combined_outers.size() > 1) {
+		std::size_t divide_i = combined_outers.size() / 2 + combined_outers.size() % 2;
 		for(std::size_t i = 0; i < combined_outers.size() / 2; ++i) {
-			std::size_t index = i + combined_outers.size() / 2;
+			std::size_t index = i + divide_i;
 			if(index < combined_outers.size()) {
 				multi_polygon_t result;
-				boost::geometry::sym_difference(combined_outers[i], combined_outers[index], result);
-				combined_outers[i] = std::move(result);
+				boost::geometry::sym_difference(combined_outers[index], combined_outers[i], result);
+				combined_outers[i] = result;
 			}
 		}
 
-		combined_outers.resize(combined_outers.size() / 2);
+		combined_outers.resize(divide_i);
 	}
 
 	// Calculate all inners and combine them if possible
