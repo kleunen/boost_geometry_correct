@@ -18,6 +18,8 @@
 #include <boost/geometry/index/rtree.hpp>
 #include <boost/function_output_iterator.hpp>
 
+#include <iostream>
+
 namespace geometry {
 
 namespace impl {
