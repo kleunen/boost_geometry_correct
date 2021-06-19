@@ -10,6 +10,11 @@ typedef bg::model::d2::point_xy<double> point;
 typedef bg::model::polygon<point> polygon;
 typedef bg::model::multi_polygon<polygon> multi_polygon;
 
+enum CombineType {
+	CombineNonZeroWinding,
+	CombineOddEven
+};
+
 template <typename T>
 void write_svg(std::string const& name, T const& input, T const& result)
 {
@@ -29,7 +34,7 @@ void write_svg(std::string const& name, T const& input, T const& result)
   mapper.map(result, "fill-opacity:0.6;fill:rgb(0,0,255);stroke:rgb(0,0,128);" "stroke-width:2");
 }
 
-void correct_from_string(std::string const &name, std::string const &input, bool odd_even = false)
+void correct_from_string(std::string const &name, std::string const &input, CombineType type = CombineNonZeroWinding)
 {
 	std::cout << "Dissolve polygon: " << input << std::endl;
 
@@ -45,9 +50,9 @@ void correct_from_string(std::string const &name, std::string const &input, bool
 	double remove_spike_threshold = 1E-12;
 
 	multi_polygon result;
-	if(!odd_even)
+	if(type == CombineNonZeroWinding)
 		geometry::correct(poly, result, remove_spike_threshold);
-	else
+	else if(type == CombineOddEven)
 		geometry::correct_odd_even(poly, result, remove_spike_threshold);
 
 	write_svg(name, poly, result);
@@ -69,7 +74,7 @@ void correct_from_string(std::string const &name, std::string const &input, bool
 	std::cout << std::endl;
 }
 
-void benchmark(bool odd_even) 
+void benchmark(CombineType type)
 {
 	// Benchmark overlapping approach
 	multi_polygon poly;
@@ -83,22 +88,28 @@ void benchmark(bool odd_even)
 		double remove_spike_threshold = 1E-12;
 
 		multi_polygon result;
-		if(!odd_even)
+		if(type == CombineNonZeroWinding)
 			geometry::correct(poly, result, remove_spike_threshold);
-		else
+		else if(type == CombineOddEven)
 			geometry::correct_odd_even(poly, result, remove_spike_threshold);
 	}
 
   	auto const end = std::chrono::steady_clock::now();
   	auto const ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  	std::cout << (odd_even ? " time o/e: " : " time: ") << (double)ms / count << std::endl;
+
+	if(type == CombineNonZeroWinding)
+		std::cout << "time: ";
+	else if(type == CombineOddEven)
+		std::cout << "time o/e: ";
+
+  	std::cout << (double)ms / count << std::endl;
 }
 
 int main()
 {
 	// Dissolve pentagram
-	correct_from_string("pentagram", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", false);
-	correct_from_string("pentagram_o_e", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", true);
+	correct_from_string("pentagram", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", CombineNonZeroWinding);
+	correct_from_string("pentagram_o_e", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", CombineOddEven);
 
 	// Dissolve mote complex example
 	correct_from_string("complex", "MULTIPOLYGON (((55 10, 141 237, 249 23, 21 171, 252 169, 24 89, 266 73, 55 10)))");
@@ -112,9 +123,9 @@ int main()
 
 	// Overlapping region (odd-even)
 	std::cout << "Overlapping region using odd-even: " << std::endl;
-	correct_from_string("overlapping_o_e", "MULTIPOLYGON (((10 70, 90 70, 90 50, 30 50, 30 30, 50 30, 50 90, 70 90, 70 10, 10 10, 10 70)))", true);
+	correct_from_string("overlapping_o_e", "MULTIPOLYGON (((10 70, 90 70, 90 50, 30 50, 30 30, 50 30, 50 90, 70 90, 70 10, 10 10, 10 70)))", CombineOddEven);
 
-	benchmark(false);
-	benchmark(true);
+	benchmark(CombineNonZeroWinding);
+	benchmark(CombineOddEven);
 }
 

@@ -18,6 +18,10 @@
 #include <boost/geometry/index/rtree.hpp>
 #include <boost/function_output_iterator.hpp>
 
+#include <boost/geometry/algorithms/detail/overlay/self_turn_points.hpp>
+#include <boost/geometry/policies/robustness/get_rescale_policy.hpp>
+#include <boost/geometry/strategies/strategies.hpp>
+
 #include <iostream>
 
 namespace geometry {
@@ -108,6 +112,13 @@ struct pseudo_vertice
     { }        
 };
 
+struct assign_policy    {
+	static bool const include_no_turn = true;
+	static bool const include_degenerate = true;
+	static bool const include_opposite = true;
+	static bool const include_start_turn = true;
+};
+
 template<
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename ring_t = boost::geometry::model::ring<point_t>
@@ -118,46 +129,55 @@ static inline void dissolve_find_intersections(
     		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> &start_keys)
 {
 	if(ring.empty()) return;
-
-	boost::geometry::index::rtree<std::pair< boost::geometry::model::segment<point_t>, std::size_t >, boost::geometry::index::quadratic<16>> index;
-
-	// Generate all by-pass intersections in the graph
-	// Generate a list of all by-pass intersections
-    pseudo_vertices.emplace(pseudo_vertice_key(ring.size() - 1, ring.size() - 1, 0.0), ring.back());       
-    for(std::size_t i = ring.size() - 1; i--; )
-    {
+   
+    for(std::size_t i = 0; i < ring.size(); ++i) {
         pseudo_vertices.emplace(pseudo_vertice_key(i, i, 0.0), ring[i]);       
-		boost::geometry::model::segment<point_t> line_1(ring[i], ring[i + 1]);
+	}
 
-		boost::geometry::index::query(
-				index, boost::geometry::index::intersects(line_1), 
-				boost::make_function_output_iterator([&](std::pair< boost::geometry::model::segment<point_t>, std::size_t > const &iter) {
+	// Detect intersections and generate pseudo-vertices
+    typedef typename boost::geometry::strategy::intersection::services::default_strategy
+        <
+            typename boost::geometry::cs_tag<ring_t>::type
+        >::type strategy_type;
+    typedef boost::geometry::detail::no_rescale_policy rescale_policy_type;
+    typedef boost::geometry::detail::overlay::turn_info
+        <
+            point_t,
+            typename boost::geometry::segment_ratio_type
+                <
+                    point_t, rescale_policy_type
+                >::type
+        > turn_info;
 
-			auto const &line_2 = iter.first;
-			auto j = iter.second;
-			
-			std::vector<point_t> output;
-			boost::geometry::intersection(line_1, line_2, output);
+    std::vector<turn_info> turns;
 
-			for(auto const &p: output) {
-				double scale_1 = boost::geometry::comparable_distance(p, ring[i]) / boost::geometry::comparable_distance(ring[i + 1], ring[i]);
-				double scale_2 = boost::geometry::comparable_distance(p, ring[j]) / boost::geometry::comparable_distance(ring[j + 1], ring[j]);
-				if(scale_1 < 1.0 && scale_2 < 1.0) {
-					pseudo_vertice_key key_j(j, i, scale_2);
-					pseudo_vertices.emplace(pseudo_vertice_key(i, j, scale_1, true), pseudo_vertice<point_t>(p, key_j));
-					pseudo_vertices.emplace(key_j, p);
-					start_keys.insert(key_j);
+    strategy_type strategy;
+    rescale_policy_type rescale_policy;
 
-					pseudo_vertice_key key_i(i, j, scale_1);
-					pseudo_vertices.emplace(pseudo_vertice_key(j, i, scale_2, true), pseudo_vertice<point_t>(p, key_i));
-					pseudo_vertices.emplace(key_i, p);
-					start_keys.insert(key_i);
-				}
-			}          
-		}));
+    boost::geometry::detail::self_get_turn_points::no_interrupt_policy policy;
+    boost::geometry::self_turns
+        <
+			assign_policy
+        >(ring, strategy, rescale_policy, turns, policy);
 
-		index.insert(std::make_pair(boost::geometry::model::segment<point_t>(ring[i], ring[i+1]), i));
-    }
+	for(auto const &turn: turns) {
+		auto p = turn.point;
+		auto i = std::min(turn.operations[0].seg_id.segment_index, turn.operations[1].seg_id.segment_index);
+		auto j = std::max(turn.operations[0].seg_id.segment_index, turn.operations[1].seg_id.segment_index);
+
+		double offset_1 = boost::geometry::comparable_distance(p, ring[i]);
+		double offset_2 = boost::geometry::comparable_distance(p, ring[j]);
+
+		pseudo_vertice_key key_j(j, i, offset_2);
+		pseudo_vertices.emplace(pseudo_vertice_key(i, j, offset_1, true), pseudo_vertice<point_t>(p, key_j));
+		pseudo_vertices.emplace(key_j, p);
+		start_keys.insert(key_j);
+
+		pseudo_vertice_key key_i(i, j, offset_1);
+		pseudo_vertices.emplace(pseudo_vertice_key(j, i, offset_2, true), pseudo_vertice<point_t>(p, key_i));
+		pseudo_vertices.emplace(key_i, p);
+		start_keys.insert(key_i);
+	}
 }
 
 // Remove invalid points (NaN) from ring
