@@ -357,7 +357,7 @@ template<
 	>
 struct fill_non_zero_winding
 {
-	inline void operator()(std::vector<multi_polygon_t> &input) 
+	inline void operator()(std::vector<multi_polygon_t> &input) const
 	{
 		auto compare = [](multi_polygon_t const &a, multi_polygon_t const &b) { return std::abs(boost::geometry::area(a)) > std::abs(boost::geometry::area(b)); };
 		std::sort(input.begin(), input.end(), compare);
@@ -402,7 +402,7 @@ template<
 	>
 struct fill_odd_even
 {
-	inline void operator()(std::vector<multi_polygon_t> &input) 
+	inline void operator()(std::vector<multi_polygon_t> &input) const
 	{
 		auto compare = [](multi_polygon_t const &a, multi_polygon_t const &b) { return std::abs(boost::geometry::area(a)) < std::abs(boost::geometry::area(b)); };
 		std::sort(input.begin(), input.end(), compare);
@@ -426,20 +426,44 @@ struct fill_odd_even
 };
  
 template<
-	typename fill_function_t,
+	typename combine_function_t,
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename polygon_t = boost::geometry::model::polygon<point_t>,
 	typename ring_t = boost::geometry::model::ring<point_t>,
 	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
 	>
-static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area, fill_function_t fill)
+static inline void correct_reduce(std::vector<multi_polygon_t> &input, combine_function_t const &combine)
+{
+	while(input.size() > 1) {
+		std::size_t divide_i = input.size() / 2 + input.size() % 2;
+		for(std::size_t i = 0; i < input.size() / 2; ++i) {
+			std::size_t index = i + divide_i;
+			if(index < input.size()) {
+				combine(input[i], input[index]);
+			}
+		}
+
+		input.resize(divide_i);
+	}
+}
+
+template<
+	typename fill_function_t,
+	typename combine_function_t,
+	typename difference_function_t,
+	typename point_t = boost::geometry::model::d2::point_xy<double>, 
+	typename polygon_t = boost::geometry::model::polygon<point_t>,
+	typename ring_t = boost::geometry::model::ring<point_t>,
+	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
+	>
+static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area, fill_function_t const &fill, combine_function_t const &combine, difference_function_t const &difference)
 {
 	auto order = boost::geometry::point_order<polygon_t>::value;
 	auto outer_rings = correct(input.outer(), order, remove_spike_min_area);
 
 	// Calculate all outers 
 	std::vector<multi_polygon_t> combined_outers;
-	multi_polygon_t combined_inners;
+	std::vector<multi_polygon_t> combined_inners;
 
 	for(auto &ring: outer_rings) {
 		polygon_t poly;
@@ -458,31 +482,38 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 		poly.outer() = std::move(ring);
 
 		multi_polygon_t new_inners;
-		correct(poly, new_inners, remove_spike_min_area, fill);
-		result_combine_multiple(combined_inners, new_inners);
+		correct(poly, new_inners, remove_spike_min_area, fill, combine, difference);
+		combined_inners.push_back(std::move(new_inners));
 	}
 
+	// Combine all inners
+	correct_reduce(combined_inners, combine);
+
 	// Cut out all inners from all the outers
-	if(!combined_outers.empty())
-		boost::geometry::difference(combined_outers.front(), combined_inners, output);
+	if(!combined_outers.empty()) {
+		if(!combined_inners.empty())
+			difference(combined_outers.front(), combined_inners.front(), output);
+		else
+			output = std::move(combined_outers.front());
+	}
 }
 
 template<
 	typename fill_function_t,
+	typename combine_function_t,
+	typename difference_function_t,
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename polygon_t = boost::geometry::model::polygon<point_t>,
 	typename ring_t = boost::geometry::model::ring<point_t>,
 	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
 	>
-static inline void correct(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area, fill_function_t fill)
+static inline void correct(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area, fill_function_t const &fill, combine_function_t const &combine, difference_function_t const &difference)
 {
 	for(auto const &polygon: input)
 	{
 		multi_polygon_t new_polygons;
-		correct(polygon, new_polygons, remove_spike_min_area, fill);
-
-		for(auto &new_polygon: new_polygons) 
-			result_combine(output, std::move(new_polygon));
+		correct(polygon, new_polygons, remove_spike_min_area, fill, combine, difference);
+		combine(output, new_polygons);
 	}
 }
 
@@ -495,7 +526,11 @@ template<
 	>
 static inline void correct(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
-	impl::correct(input, output, remove_spike_min_area, impl::fill_non_zero_winding<point_t, polygon_t, multi_polygon_t>());
+	impl::correct(input, output, remove_spike_min_area, 
+		impl::fill_non_zero_winding<point_t, polygon_t, multi_polygon_t>(), 
+		impl::result_combine_multiple<multi_polygon_t, multi_polygon_t>, 
+		boost::geometry::difference<multi_polygon_t, multi_polygon_t, multi_polygon_t>
+		);
 }
 
 template<
@@ -505,7 +540,16 @@ template<
 	>
 static inline void correct_odd_even(polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
-	impl::correct(input, output, remove_spike_min_area, impl::fill_odd_even<point_t, polygon_t, multi_polygon_t>());
+	impl::correct(input, output, remove_spike_min_area, 
+		impl::fill_odd_even<point_t, polygon_t, multi_polygon_t>(), 
+		[](multi_polygon_t &a, multi_polygon_t const &b) {
+			multi_polygon_t result;
+			boost::geometry::sym_difference(a, b, result);
+			a = std::move(result); 
+		},
+		boost::geometry::sym_difference<multi_polygon_t, multi_polygon_t, multi_polygon_t>
+		);
+
 }
 
 
@@ -517,7 +561,11 @@ template<
 	>
 static inline void correct(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
-	impl::correct(input, output, remove_spike_min_area, impl::fill_non_zero_winding<point_t, polygon_t, multi_polygon_t>());
+	impl::correct(input, output, remove_spike_min_area, 
+		impl::fill_non_zero_winding<point_t, polygon_t, multi_polygon_t>(),
+		impl::result_combine_multiple<multi_polygon_t, multi_polygon_t>, 
+		boost::geometry::difference<multi_polygon_t, multi_polygon_t, multi_polygon_t>
+		);
 }
 
 template<
@@ -528,7 +576,15 @@ template<
 	>
 static inline void correct_odd_even(multi_polygon_t const &input, multi_polygon_t &output, double remove_spike_min_area = 0.0)
 {
-	impl::correct(input, output, remove_spike_min_area, impl::fill_odd_even<point_t, polygon_t, multi_polygon_t>());
+	impl::correct(input, output, remove_spike_min_area, 
+		impl::fill_odd_even<point_t, polygon_t, multi_polygon_t>(),
+		[](multi_polygon_t &a, multi_polygon_t const &b) {
+			multi_polygon_t result;
+			boost::geometry::sym_difference(a, b, result);
+			a = std::move(result); 
+		},
+		boost::geometry::sym_difference<multi_polygon_t, multi_polygon_t, multi_polygon_t>
+		);
 }
 
 }
