@@ -280,13 +280,6 @@ void jts_test_cases()
 
 	// Polygon/Hole - Exverted shell, point touch; exverted hole, point touch 
 	correct_from_string("POLYGON ((10 10, 10 90, 50 50, 90 90, 90 10, 50 50, 10 10), (80 60, 50 50, 20 60, 20 40, 50 50, 80 40, 80 60))");
-
-	// JTS document
-	// https://docs.google.com/document/d/19YEQS0goSpZlwaYivS6ZpxJ5gRth2gdG6aY2XVd5fcc/edit
-	// 
-	correct_from_string("POLYGON ((10 70, 90 70, 90 50, 30 50, 30 30, 50 30, 50 90, 70 90, 70 10, 10 10, 10 70))");
-
-	correct_from_string("POLYGON ((10 50, 80 50, 80 70, 40 70, 40 30, 30 30, 30 80, 90 80, 90 40, 20 40, 20 20, 50 20, 50 90, 60 90, 60 10, 10 10, 10 50))");
 }
 
 int main()
@@ -296,6 +289,9 @@ int main()
 	random_test();
 	jts_test_cases(); 
 
+	// Reference cases from document
+	// https://docs.google.com/document/d/19YEQS0goSpZlwaYivS6ZpxJ5gRth2gdG6aY2XVd5fcc/edit
+	// 
 	generate_from_string("ref_figure_8", "POLYGON ((10 90, 90 10, 90 90, 10 10, 10 90))");
 	generate_from_string("ref_self_cross", "POLYGON ((10 70, 90 70, 90 50, 30 50, 30 30, 50 30, 50 90, 70 90, 70 10, 10 10, 10 70))");
 	generate_from_string("ref_self_overlap_multiple", "POLYGON ((10 50, 80 50, 80 70, 40 70, 40 30, 30 30, 30 80, 90 80, 90 40, 20 40, 20 20, 50 20, 50 90, 60 90, 60 10, 10 10, 10 50))");
@@ -313,7 +309,19 @@ int main()
 	generate_from_string("ref_holes_overlap", "POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (80 80, 80 30, 30 30, 30 80, 80 80), (20 20, 20 70, 70 70, 70 20, 20 20))");
 	generate_from_string("ref_holes_cover_exactly", "POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (50 50, 50 10, 10 10, 10 50, 50 50), (50 50, 90 50, 90 10, 50 10, 50 50), (50 50, 10 50, 10 90, 50 90, 50 50), (50 50, 50 90, 90 90, 90 50, 50 50))");
 	generate_from_string("ref_holes_nested", "POLYGON ((10 90, 90 90, 90 10, 10 10, 10 90), (30 70, 70 70, 70 30, 30 30, 30 70), (20 80, 80 80, 80 20, 20 20, 20 80))");
-	generate_from_string("ref_nest_polygons", "MULTIPOLYGON (((30 70, 70 70, 70 30, 30 30, 30 70)), ((10 90, 90 90, 90 10, 10 10, 10 90)))");
+
+	generate_from_string<multi_polygon>("ref_multi_nest", "MULTIPOLYGON (((30 70, 70 70, 70 30, 30 30, 30 70)), ((10 90, 90 90, 90 10, 10 10, 10 90)))");
+	generate_from_string<multi_polygon>("ref_multi_multiple_nest", "MULTIPOLYGON (((40 60, 60 60, 60 40, 40 40, 40 60)), ((30 70, 70 70, 70 30, 30 30, 30 70)), ((20 80, 80 80, 80 20, 20 20, 20 80)), ((10 90, 90 90, 90 10, 10 10, 10 90)))");
+	generate_from_string<multi_polygon>("ref_multi_overlapping", "MULTIPOLYGON (((10 90, 60 90, 60 10, 10 10, 10 90)), ((90 80, 90 20, 40 20, 40 80, 90 80)))");
+	generate_from_string<multi_polygon>("ref_multi_multiple_overlapping", "MULTIPOLYGON (((90 90, 90 30, 30 30, 30 90, 90 90)), ((20 20, 20 80, 80 80, 80 20, 20 20)), ((10 10, 10 70, 70 70, 70 10, 10 10)))");
+	generate_from_string<multi_polygon>("ref_multi_5_overlapping", "MULTIPOLYGON (((20 90, 80 90, 80 60, 20 60, 20 90)), ((30 70, 70 70, 70 30, 30 30, 30 70)), ((10 80, 40 80, 40 20, 10 20, 10 80)), ((20 10, 20 40, 80 40, 80 10, 20 10)), ((90 80, 90 20, 60 20, 60 80, 90 80)))");
+	generate_from_string<multi_polygon>("ref_multi_poly_hole", "MULTIPOLYGON (((10 90, 60 90, 60 10, 10 10, 10 90), (30 70, 80 70, 80 30, 30 30, 30 70)), ((90 80, 90 20, 20 20, 20 80, 90 80)))");
+	generate_from_string<multi_polygon>("ref_multi_hole_overlap_inside", "MULTIPOLYGON (((10 90, 60 90, 60 10, 10 10, 10 90), (20 80, 90 80, 90 20, 20 20, 20 80)), ((80 70, 80 30, 30 30, 30 70, 80 70)))");
+	generate_from_string<multi_polygon>("ref_multi_hole_overlap_hole", "MULTIPOLYGON (((10 90, 40 90, 40 10, 10 10, 10 90), (20 80, 80 80, 80 20, 20 20, 20 80)), ((90 90, 90 10, 60 10, 60 90, 90 90)))");
+	generate_from_string<multi_polygon>("ref_multi_poly_overlap_hole", "MULTIPOLYGON (((10 90, 60 90, 60 10, 10 10, 10 90)), ((90 80, 90 20, 20 20, 20 80, 90 80), (80 70, 80 30, 30 30, 30 70, 80 70)))");
+	generate_from_string<multi_polygon>("ref_multi_poly_hole_overlap_poly", "MULTIPOLYGON (((10 90, 60 90, 60 10, 10 10, 10 90), (30 70, 80 70, 80 30, 30 30, 30 70)), ((90 80, 90 20, 40 20, 40 80, 90 80)))");
+	generate_from_string<multi_polygon>("ref_multi_adjacent_poly", "MULTIPOLYGON (((10 90, 50 90, 50 10, 10 10, 10 90)), ((90 80, 90 20, 50 20, 50 80, 90 80)))");
+	generate_from_string<multi_polygon>("ref_multi_grid", "MULTIPOLYGON (((0 0, 0 20, 20 20, 20 0, 0 0)), ((0 20, 0 40, 20 40, 20 20, 0 20)), ((0 40, 0 60, 20 60, 20 40, 0 40)), ((0 60, 0 80, 20 80, 20 60, 0 60)), ((0 80, 0 100, 20 100, 20 80, 0 80)), ((20 0, 20 20, 40 20, 40 0, 20 0)), ((20 20, 20 40, 40 40, 40 20, 20 20)), ((20 40, 20 60, 40 60, 40 40, 20 40)), ((20 60, 20 80, 40 80, 40 60, 20 60)), ((20 80, 20 100, 40 100, 40 80, 20 80)), ((40 0, 40 20, 60 20, 60 0, 40 0)), ((40 20, 40 40, 60 40, 60 20, 40 20)), ((40 40, 40 60, 60 60, 60 40, 40 40)), ((40 60, 40 80, 60 80, 60 60, 40 60)), ((40 80, 40 100, 60 100, 60 80, 40 80)), ((60 0, 60 20, 80 20, 80 0, 60 0)), ((60 20, 60 40, 80 40, 80 20, 60 20)), ((60 40, 60 60, 80 60, 80 40, 60 40)), ((60 60, 60 80, 80 80, 80 60, 60 60)), ((60 80, 60 100, 80 100, 80 80, 60 80)), ((80 0, 80 20, 100 20, 100 0, 80 0)), ((80 20, 80 40, 100 40, 100 20, 80 20)), ((80 40, 80 60, 100 60, 100 40, 80 40)), ((80 60, 80 80, 100 80, 100 60, 80 60)), ((80 80, 80 100, 100 100, 100 80, 80 80)))");
 	return 0;
 }
 
