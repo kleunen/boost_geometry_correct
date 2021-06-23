@@ -59,21 +59,6 @@ static inline void result_combine_multiple(C &result, T &new_elements)
 		result_combine(result, std::move(element));
 }
 
-template<typename C>
-static inline void result_combine_vector(C &result)
-{
-	while(result.size() > 1) {
-		std::size_t divide_i = result.size() / 2 + result.size() % 2;
-		for(std::size_t i = 0; i < result.size() / 2; ++i) {
-			std::size_t index = i + divide_i;
-			if(index < result.size()) {
-				result_combine_multiple(result[i], result[index]);
-			}
-		}
-		result.resize(divide_i);
-	} 
-}
-
 struct pseudo_vertice_key
 {
     std::size_t index_1;
@@ -426,28 +411,6 @@ struct fill_odd_even
 };
  
 template<
-	typename combine_function_t,
-	typename point_t = boost::geometry::model::d2::point_xy<double>, 
-	typename polygon_t = boost::geometry::model::polygon<point_t>,
-	typename ring_t = boost::geometry::model::ring<point_t>,
-	typename multi_polygon_t = boost::geometry::model::multi_polygon<polygon_t>
-	>
-static inline void correct_reduce(std::vector<multi_polygon_t> &input, combine_function_t const &combine)
-{
-	while(input.size() > 1) {
-		std::size_t divide_i = input.size() / 2 + input.size() % 2;
-		for(std::size_t i = 0; i < input.size() / 2; ++i) {
-			std::size_t index = i + divide_i;
-			if(index < input.size()) {
-				combine(input[i], input[index]);
-			}
-		}
-
-		input.resize(divide_i);
-	}
-}
-
-template<
 	typename fill_function_t,
 	typename combine_function_t,
 	typename difference_function_t,
@@ -463,7 +426,7 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 
 	// Calculate all outers 
 	std::vector<multi_polygon_t> combined_outers;
-	std::vector<multi_polygon_t> combined_inners;
+	multi_polygon_t combined_inners;
 
 	for(auto &ring: outer_rings) {
 		polygon_t poly;
@@ -483,18 +446,12 @@ static inline void correct(polygon_t const &input, multi_polygon_t &output, doub
 
 		multi_polygon_t new_inners;
 		correct(poly, new_inners, remove_spike_min_area, fill, combine, difference);
-		combined_inners.push_back(std::move(new_inners));
+		combine(combined_inners, new_inners);
 	}
-
-	// Combine all inners
-	correct_reduce(combined_inners, combine);
 
 	// Cut out all inners from all the outers
 	if(!combined_outers.empty()) {
-		if(!combined_inners.empty())
-			difference(combined_outers.front(), combined_inners.front(), output);
-		else
-			output = std::move(combined_outers.front());
+		difference(combined_outers.front(), combined_inners, output);
 	}
 }
 
