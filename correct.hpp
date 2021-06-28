@@ -210,31 +210,70 @@ static inline void correct_close(ring_t &ring)
 
 }
 
+template< typename point_t = boost::geometry::model::d2::point_xy<double> >
+struct compare_point_less
+{
+    bool operator()(point_t const &a, point_t const &b) {
+        if(a.x() < b.x()) return true;
+        if(a.x() > b.x()) return false;
+        return (a.y() < b.y());
+    };
+};
+
 template<
 	typename point_t = boost::geometry::model::d2::point_xy<double>, 
 	typename ring_t = boost::geometry::model::ring<point_t>
 	>
 static inline std::vector<std::pair<ring_t, double>> dissolve_generate_rings(
 			std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> &pseudo_vertices,
-    		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> &start_keys, 
+    		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> const &all_start_keys, 
 			boost::geometry::order_selector order, double remove_spike_min_area = 0.0)
 {
 	std::vector<std::pair<ring_t,double>> result;
 
 	// Generate all polygons by tracing all the intersections
 	// Perform union to combine all polygons into single polygon again
+	auto start_keys = all_start_keys;
     while(!start_keys.empty()) {    
 		ring_t new_ring;
-        
+
 		// Store point in generated polygon
 		auto push_point = [&new_ring](auto const &p) { 
-            if(new_ring.empty() || boost::geometry::comparable_distance(new_ring.back(), p) > 0)
+            if(new_ring.empty() || boost::geometry::comparable_distance(new_ring.back(), p) > 0) {
                 new_ring.push_back(p);
+			}
 		};
 
-        auto start_iter = pseudo_vertices.find(*start_keys.begin());
-        auto i = start_iter;
+		// Store newly generated ring
+		auto push_ring = [&result, remove_spike_min_area](ring_t &new_ring) {
+			auto area = boost::geometry::area(new_ring);
+			if(std::abs(area) > remove_spike_min_area) {
+		    	result.push_back(std::make_pair(std::move(new_ring), area));
+			}
+		};
+
+        auto i = pseudo_vertices.find(*start_keys.begin());		
     
+    	std::vector< std::pair<point_t, std::size_t> > start_points;
+		start_points.push_back(std::make_pair(i->second.p, 0));
+
+		// Check if the outer or inner ring is closed
+		auto is_closed = [&new_ring, &start_points, &push_ring](point_t const &p) {
+			for(auto const &i: start_points) {
+				if(new_ring.size() > i.second+1 && boost::geometry::comparable_distance(i.first, p) == 0) {
+					if(i.second == 0) return true;
+
+					// Copy the new inner ring
+					ring_t inner_ring(new_ring.begin() + i.second, new_ring.end());
+					push_ring(inner_ring);
+
+					// Remove the inner ring
+					new_ring.erase(new_ring.begin() + i.second, new_ring.end());
+				}
+			}
+			return false;
+		};
+
         do {
             auto const &key = i->first;
             auto const &value = i->second;
@@ -242,7 +281,17 @@ static inline std::vector<std::pair<ring_t, double>> dissolve_generate_rings(
 			// Store the point in output polygon
 			push_point(value.p);
             
-            start_keys.erase(key);
+			// Remove the key from the starting keys list
+			auto compare_key = [&key](pseudo_vertice_key const &i) {
+				return (key.index_1 == i.index_1 && key.index_2 == i.index_2 && key.scale == i.scale && key.reroute == i.reroute);
+			};
+
+			start_keys.erase(key);
+
+			// Store possible new inner ring starting point
+			if(all_start_keys.find(key) != all_start_keys.end())
+				start_points.push_back(std::make_pair(value.p, new_ring.size() - 1));
+
             if(key.reroute) {
 				// Follow by-pass
                 i = pseudo_vertices.find(value.link);
@@ -254,25 +303,10 @@ static inline std::vector<std::pair<ring_t, double>> dissolve_generate_rings(
             }
 
 			// Repeat until back at starting point
-       	} while(new_ring.size() < 2 || boost::geometry::comparable_distance(new_ring.front(), new_ring.back()) != 0);
-
-		// Remove overlapping region from begin/end
-		for(std::size_t i = 0; i < new_ring.size() / 2 - 1; ++i) {
-			if(boost::geometry::comparable_distance(new_ring[i + 1], new_ring[new_ring.size() - i - 2]) != 0) {
-				if(i > 0) {
-					std::copy(new_ring.begin() + i, new_ring.end() - i, new_ring.begin());
-					new_ring.resize(new_ring.size() - 2 * i);
-				}
-
-				break;
-			}
-		} 
+		} while(!is_closed(new_ring.back()));
 
 		// Combine with already generated polygons
-		auto area = boost::geometry::area(new_ring);
-		if(std::abs(area) > remove_spike_min_area) {
-	    	result.push_back(std::make_pair(std::move(new_ring), area));
-		}
+		push_ring(new_ring);
    	}
 
     return result;
