@@ -409,7 +409,7 @@ struct fill_non_zero_winding
 		boost::geometry::difference(combined_outers, combined_inners, output);
 
 		input.resize(1);
-		input.front().first = std::move(combined_outers);
+		input.front().first = std::move(output);
 	}
 };
 
