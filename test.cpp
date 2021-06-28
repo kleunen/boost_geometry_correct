@@ -322,6 +322,16 @@ int main()
 	generate_from_string<multi_polygon>("ref_multi_poly_hole_overlap_poly", "MULTIPOLYGON (((10 90, 60 90, 60 10, 10 10, 10 90), (30 70, 80 70, 80 30, 30 30, 30 70)), ((90 80, 90 20, 40 20, 40 80, 90 80)))");
 	generate_from_string<multi_polygon>("ref_multi_adjacent_poly", "MULTIPOLYGON (((10 90, 50 90, 50 10, 10 10, 10 90)), ((90 80, 90 20, 50 20, 50 80, 90 80)))");
 	generate_from_string<multi_polygon>("ref_multi_grid", "MULTIPOLYGON (((0 0, 0 20, 20 20, 20 0, 0 0)), ((0 20, 0 40, 20 40, 20 20, 0 20)), ((0 40, 0 60, 20 60, 20 40, 0 40)), ((0 60, 0 80, 20 80, 20 60, 0 60)), ((0 80, 0 100, 20 100, 20 80, 0 80)), ((20 0, 20 20, 40 20, 40 0, 20 0)), ((20 20, 20 40, 40 40, 40 20, 20 20)), ((20 40, 20 60, 40 60, 40 40, 20 40)), ((20 60, 20 80, 40 80, 40 60, 20 60)), ((20 80, 20 100, 40 100, 40 80, 20 80)), ((40 0, 40 20, 60 20, 60 0, 40 0)), ((40 20, 40 40, 60 40, 60 20, 40 20)), ((40 40, 40 60, 60 60, 60 40, 40 40)), ((40 60, 40 80, 60 80, 60 60, 40 60)), ((40 80, 40 100, 60 100, 60 80, 40 80)), ((60 0, 60 20, 80 20, 80 0, 60 0)), ((60 20, 60 40, 80 40, 80 20, 60 20)), ((60 40, 60 60, 80 60, 80 40, 60 40)), ((60 60, 60 80, 80 80, 80 60, 60 60)), ((60 80, 60 100, 80 100, 80 80, 60 80)), ((80 0, 80 20, 100 20, 100 0, 80 0)), ((80 20, 80 40, 100 40, 100 20, 80 20)), ((80 40, 80 60, 100 60, 100 40, 80 40)), ((80 60, 80 80, 100 80, 100 60, 80 60)), ((80 80, 80 100, 100 100, 100 80, 80 80)))");
+
+	 //correct_from_string("test", "MULTIPOLYGON (((0 0, 5 0, 5 10, 10 10, 10 5, 0 5, 0 0, 10 0, 0 10, 0 0)))", CombineNonZeroWinding);
+       //correct_from_string("box", "MULTIPOLYGON (((0 0, 10 0, 0 10, 10 10, 0 0, 5 0, 5 10, 0 10, 0 5, 10 5, 10 0, 0 0)))", CombineNonZeroWinding);
+       //correct_from_string("pentagram", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", CombineNonZeroWinding);
+       //correct_from_string("example", "MULTIPOLYGON (((0 0, 5 0, 5 10, 10 10, 10 5, 0 5, 0 0, 10 0, 0 10, 00)))", CombineNonZeroWinding);
+       //correct_from_string("example", "MULTIPOLYGON (((0 0, 5 0, 5 6, 2 6, 2 2, 8 2, 8 6, 5 6, 5 0, 10 0, 10 8, 0 8, 0 0)))", CombineNonZeroWinding);
+
+	generate_from_string<multi_polygon>("many_incoming_nzw", "MULTIPOLYGON (((0 0, 5 0, 5 10, 10 10, 10 5, 0 5, 0 0, 10 0, 0 10, 0 0)))", CombineNonZeroWinding);
+	generate_from_string<multi_polygon>("many_incoming_oe", "MULTIPOLYGON (((0 0, 5 0, 5 10, 10 10, 10 5, 0 5, 0 0, 10 0, 0 10, 0 0)))", CombineOddEven);
+
 	return 0;
 }
 

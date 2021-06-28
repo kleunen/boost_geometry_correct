@@ -107,8 +107,6 @@ void benchmark(CombineType type)
 
 int main()
 {
-	//correct_from_string("multiple", "MULTIPOLYGON (((100 100, 100 300, 200 300, 200 130, 130 130, 130 250, 200 250, 200 160, 150 160, 150 220, 240 220, 240 160, 200 160, 200 250, 270 250, 270 130, 200 130, 200 300, 300 300, 300 100, 100 100)))", CombineOddEven);
-
 	// Dissolve pentagram
 	correct_from_string("pentagram", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", CombineNonZeroWinding);
 	correct_from_string("pentagram_o_e", "MULTIPOLYGON (((5 0, 2.5 9, 9.5 3.5, 0.5 3.5, 7.5 9, 5 0)))", CombineOddEven);
