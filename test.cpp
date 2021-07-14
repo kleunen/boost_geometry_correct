@@ -285,7 +285,7 @@ void jts_test_cases()
 int main()
 {
 	test_cases();
-	data_test_cases();
+	//data_test_cases();
 	random_test();
 	jts_test_cases(); 
 

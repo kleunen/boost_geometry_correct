@@ -16,7 +16,7 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
-#include <boost/function_output_iterator.hpp>
+#include <boost/iterator/function_output_iterator.hpp>
 
 #include <boost/geometry/algorithms/detail/overlay/self_turn_points.hpp>
 #include <boost/geometry/policies/robustness/get_rescale_policy.hpp>
@@ -118,23 +118,15 @@ static inline void dissolve_find_intersections(
 	}
 
 	// Detect intersections and generate pseudo-vertices
-    typedef typename boost::geometry::strategy::intersection::services::default_strategy
-        <
-            typename boost::geometry::cs_tag<ring_t>::type
-        >::type strategy_type;
+	boost::geometry::strategies::cartesian<> strategy;
     typedef boost::geometry::detail::no_rescale_policy rescale_policy_type;
     typedef boost::geometry::detail::overlay::turn_info
         <
-            point_t,
-            typename boost::geometry::segment_ratio_type
-                <
-                    point_t, rescale_policy_type
-                >::type
+            point_t
         > turn_info;
 
     std::vector<turn_info> turns;
 
-    strategy_type strategy;
     rescale_policy_type rescale_policy;
 
     boost::geometry::detail::self_get_turn_points::no_interrupt_policy policy;
