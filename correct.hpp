@@ -206,7 +206,7 @@ static inline void correct_close(ring_t &ring)
 template< typename point_t = boost::geometry::model::d2::point_xy<double> >
 struct compare_point_less
 {
-    bool operator()(point_t const &a, point_t const &b) {
+    bool operator()(point_t const &a, point_t const &b) const {
         if(a.x() < b.x()) return true;
         if(a.x() > b.x()) return false;
         return (a.y() < b.y());
