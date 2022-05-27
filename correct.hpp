@@ -109,7 +109,7 @@ template<
 static inline void dissolve_find_intersections(
 			ring_t const &ring,
 			std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> &pseudo_vertices,
-    		std::vector<pseudo_vertice_key> &start_keys)
+    		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> &start_keys)
 {
 	if(ring.empty()) return;
    
@@ -140,19 +140,18 @@ static inline void dissolve_find_intersections(
 		auto i = std::min(turn.operations[0].seg_id.segment_index, turn.operations[1].seg_id.segment_index);
 		auto j = std::max(turn.operations[0].seg_id.segment_index, turn.operations[1].seg_id.segment_index);
 
-		//std::cout << i << " / " << j << std::endl;
 		double offset_1 = boost::geometry::comparable_distance(p, ring[i]);
 		double offset_2 = boost::geometry::comparable_distance(p, ring[j]);
 
 		pseudo_vertice_key key_j(j, i, offset_2);
 		pseudo_vertices.emplace(pseudo_vertice_key(i, j, offset_1, true), pseudo_vertice<point_t>(p, key_j));
 		pseudo_vertices.emplace(key_j, p);
-		start_keys.push_back(key_j);
+		start_keys.insert(key_j);
 
 		pseudo_vertice_key key_i(i, j, offset_1);
 		pseudo_vertices.emplace(pseudo_vertice_key(j, i, offset_2, true), pseudo_vertice<point_t>(p, key_i));
 		pseudo_vertices.emplace(key_i, p);
-		start_keys.push_back(key_i);
+		start_keys.insert(key_i);
 	}
 }
 
@@ -219,20 +218,10 @@ template<
 	>
 static inline std::vector<std::pair<ring_t, double>> dissolve_generate_rings(
 			std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> &pseudo_vertices,
-    		std::vector<pseudo_vertice_key> &all_start_keys, 
+    		std::set<pseudo_vertice_key, compare_pseudo_vertice_key> const &all_start_keys, 
 			boost::geometry::order_selector order, double remove_spike_min_area = 0.0)
 {
 	std::vector<std::pair<ring_t,double>> result;
-
-	std::map<point_t, std::size_t, compare_point_less<point_t>> point_count;
-	for(auto const &key: all_start_keys) 
-		point_count[pseudo_vertices.find(key)->second.p]++;
-
-	std::sort(all_start_keys.begin(), all_start_keys.end(), [&](pseudo_vertice_key const &a, pseudo_vertice_key const &b) {
-		auto count_1 = point_count[pseudo_vertices.find(a)->second.p];
-		auto count_2 = point_count[pseudo_vertices.find(b)->second.p];
-		return count_1 < count_2;
-	});
 
 	// Generate all polygons by tracing all the intersections
 	// Perform union to combine all polygons into single polygon again
@@ -279,7 +268,7 @@ static inline std::vector<std::pair<ring_t, double>> dissolve_generate_rings(
 
         do {
             auto const &key = i->first;
-            auto &value = i->second;
+            auto const &value = i->second;
         
 			// Store the point in output polygon
 			push_point(value.p);
@@ -289,15 +278,11 @@ static inline std::vector<std::pair<ring_t, double>> dissolve_generate_rings(
 				return (key.index_1 == i.index_1 && key.index_2 == i.index_2 && key.scale == i.scale && key.reroute == i.reroute);
 			};
 
+			start_keys.erase(key);
+
 			// Store possible new inner ring starting point
-			if(std::find_if(all_start_keys.begin(), all_start_keys.end(), compare_key) != all_start_keys.end())
+			if(all_start_keys.find(key) != all_start_keys.end())
 				start_points.push_back(std::make_pair(value.p, new_ring.size() - 1));
-    
-			// Remove start key from list
-			auto remove_iter = std::find_if(start_keys.begin(), start_keys.end(), [&key](pseudo_vertice_key const &i) {
-				return (key.index_1 == i.index_1 && key.index_2 == i.index_2 && key.scale == i.scale && key.reroute == i.reroute);
-			});
-			if(remove_iter != start_keys.end()) start_keys.erase(remove_iter);
 
             if(key.reroute) {
 				// Follow by-pass
@@ -332,7 +317,7 @@ static inline std::vector<std::pair<ring_t, double>> correct(ring_t const &ring,
 		return { };
 
     std::map<pseudo_vertice_key, pseudo_vertice<point_t>, compare_pseudo_vertice_key> pseudo_vertices;    
-    std::vector<pseudo_vertice_key> start_keys;
+    std::set<pseudo_vertice_key, compare_pseudo_vertice_key> start_keys;
 
 	ring_t new_ring = ring;
 
