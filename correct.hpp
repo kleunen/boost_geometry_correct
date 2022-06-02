@@ -16,7 +16,7 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
-#include <boost/iterator/function_output_iterator.hpp>
+#include <boost/function_output_iterator.hpp>
 
 #include <boost/geometry/algorithms/detail/overlay/self_turn_points.hpp>
 #include <boost/geometry/policies/robustness/get_rescale_policy.hpp>
@@ -143,15 +143,18 @@ static inline void dissolve_find_intersections(
 		double offset_1 = boost::geometry::comparable_distance(p, ring[i]);
 		double offset_2 = boost::geometry::comparable_distance(p, ring[j]);
 
-		pseudo_vertice_key key_j(j, i, offset_2);
-		pseudo_vertices.emplace(pseudo_vertice_key(i, j, offset_1, true), pseudo_vertice<point_t>(p, key_j));
-		pseudo_vertices.emplace(key_j, p);
-		start_keys.insert(key_j);
+		double length = boost::geometry::comparable_distance(ring[i], ring[j]);
+		if ((offset_1 > 0 && offset_1 < length) || (offset_2 > 0 && offset_2 < length)) {
+			pseudo_vertice_key key_j(j, i, offset_2);
+			pseudo_vertices.emplace(pseudo_vertice_key(i, j, offset_1, true), pseudo_vertice<point_t>(p, key_j));
+			pseudo_vertices.emplace(key_j, p);
+			start_keys.insert(key_j);
 
-		pseudo_vertice_key key_i(i, j, offset_1);
-		pseudo_vertices.emplace(pseudo_vertice_key(j, i, offset_2, true), pseudo_vertice<point_t>(p, key_i));
-		pseudo_vertices.emplace(key_i, p);
-		start_keys.insert(key_i);
+			pseudo_vertice_key key_i(i, j, offset_1);
+			pseudo_vertices.emplace(pseudo_vertice_key(j, i, offset_2, true), pseudo_vertice<point_t>(p, key_i));
+			pseudo_vertices.emplace(key_i, p);
+			start_keys.insert(key_i);
+		}
 	}
 }
 
